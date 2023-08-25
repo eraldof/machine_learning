@@ -1,0 +1,138 @@
+---
+title: "Prova 1 - Machine Learning"
+author: "Eraldo Rocha"
+format: 
+  html:
+    theme: lux
+    code-fold: show
+    code-tools: true
+    code-block-bg: true
+    code-block-border-left: "#9400D3"
+    highlight-style: github
+    code-link: true
+    toc: true 
+    toc-title: Sumário
+    toc-location: left
+    toc-depth: 2
+    number-sections: true
+    number-depth: 3
+    smooth-scroll: true
+    link-external-newwindow: true
+fig-dpi: 1000
+self-contained: true
+page-layout: full
+editor: source
+---
+
+# Questões Teóricas -
+
+## Questão:
+
+Com suas palavras, explique o dilema de balanço entre víes e variância.
+
+`Resposta`: De maneira resumida, é um conflito de escolhas. Se você deseja um modelo com um viés baixo infelizmente você terá um modelo de alta variância. Se você desejar um modelo com uma variância baixa infelizmente terá de lidar com um modelo enviesado.
+
+## Questão:
+
+Explique resumidamente o que é aprendizagem supervisionada e não-supervisionada. Cite um problema de aprendizagem supervisionada e um outro de aprendizagem não-supervisionada.
+
+`Resposta`: Aprendizagem **supervisionada** é tudo aquilo que você tem a resposta, já sabemos o **"lugar"** onde gostariamos de chegar. Exemplo prático: Certo banco de dados possui inúmeras medidas de animais diferentes e eu sei quais deles são ursos e quais não são, pode-se ajustar um modelo supervisionado, utilizando métodos de classificação.
+
+`Resposta`: Já na aprendizagem **não** **supervisionada** não dispomos de um "**objetivo**" claro. Exemplo prático: Temos em mão dados de clientes de uma empresa e gostariamos de formar grupos de clientes com caracteristicas/gostos em comum para fornecermos um atendimento personalizado, com técnicas de clustering podemos formar N grupos diferentes e com a ajuda de um especialista devemos avaliar se esses grupos fazem sentido.
+
+## Questão:
+
+Explique qual o motivo que faz com que o Erro Quadrático Médio - EQM para avaliar o desempenho de um modelo é ruim quando não adotamos nenhuma estratégia de divisão do conjunto de dados em treinamento e teste.
+
+`Resposta` Porque assim não gozamos da independencia entre variáveis e por conta disso não vale a lei dos grandes números.
+
+# Questões Práticas -
+
+```{r, warning=FALSE, message=FALSE}
+rm(list = ls())
+setwd("C:/Users/erald/Desktop/Faculdade/Aprendizagem de Maquina")
+load("dados_expectativa_renda.RData")
+set.seed(2023)
+library(rsample)
+library(dplyr)
+library(ggplot2)
+
+```
+
+## Questão:
+
+Considere o conjunto de dados de Expectativa de vida versus PIB per Capita. Considere a função g uma regressão polinomia. Utilizando o erro quadrático médio observado, sem fazer nenhuma estratégia de divisão dos dados, implemente um código em R para checar qual o melhor modelo. p = 1, ..., 50.
+
+```{r, warning=FALSE}
+p = 50
+dados_exp <- dados_expectativa_renda[,-1]
+colnames(dados_exp) <- c("y", "x")
+
+for(i in 1:p){
+  if(i > 1){
+    temp <- cbind(temp, temp[,2]^i)
+    colnames(temp) <- c("y", "x", paste0("x", 2:i))
+    fit <- lm(y~. , data = temp)
+    eqm[i] <- mean((temp$y - predict(fit, newdata = temp))^2)
+    i = i + 1
+  }
+  else{
+    fit <- lm(y~. , data = dados_exp)
+    eqm <- mean((dados_exp$y - predict(fit, newdata = dados_exp))^2)
+    temp <- dados_exp
+  }
+}
+eqm1 <- data.frame("P" = 1:50, "EQM" = eqm)
+
+g <- ggplot(eqm1, aes(P, EQM)) + 
+  geom_line(linetype = 2, size = 0.4) + 
+  geom_point(size = 2, aes(colour = -EQM)) +
+  scale_fill_brewer(palette = 1) + 
+  labs(x = "P", y = "EQM",
+       title = "Avaliação do EQM",
+       subtitle = "Sem repartir conjunto treino / teste")
+g
+
+
+```
+
+## Questão:
+
+Refaça o exercício anterior do polinômio, utilizando a estratégia de data splitting, em que divide-se o conjunto de dados em treinamento e teste. Utilize o conjunto de teste para calcular a estimativa do risco, usando o EQM.
+
+```{r, warning=FALSE}
+dados_exp <- initial_split(dados_exp, prop = 3/4)
+trainer <- training(dados_exp)
+tester <- testing(dados_exp)
+
+eqm2 = data.frame(P = 1:50, y = NA)
+for(i in 1:p){
+  if(i > 1){
+    trainer <- cbind(trainer, trainer[,2]^i)
+    colnames(trainer) <- c("y", "x", paste0("x", 2:i))
+    fit <- lm(y~., trainer)
+    
+    ## Avaliando no conjunto de teste
+    tester <- cbind(tester, tester[,2]^i)
+    colnames(tester) <- c("y", "x", paste0("x", 2:i))
+    eqm2[i,2] <- mean((tester[,1] - predict(fit, tester))^2)
+  }
+  else{
+    fit <- lm(y~., trainer)
+    eqm2[i,2] <- apply((tester[,1] - predict(fit, tester))^2, MARGIN = 2, FUN = mean)
+  }
+}
+
+colnames(eqm2) <- c("P", "EQM")
+g <- ggplot(eqm2, aes(P, EQM)) + 
+  geom_line(linetype = 2, size = 0.4) + 
+  geom_point(size = 2, aes(colour = EQM)) +
+  scale_fill_brewer(palette = 1) + 
+  labs(x = "P", y = "EQM",
+       title = "Avaliação do EQM",
+       subtitle = "Repartindo conjunto treino/teste, sem validação cruzada") +
+  xlim(c(0,18)) + ylim(c(10,130))
+
+g
+
+```
