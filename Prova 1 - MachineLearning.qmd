@@ -51,7 +51,6 @@ Explique qual o motivo que faz com que o Erro Quadrático Médio - EQM para aval
 ```{r, warning=FALSE, message=FALSE}
 rm(list = ls())
 setwd("C:/Users/erald/Desktop/Faculdade/Aprendizagem de Maquina")
-load("dados_expectativa_renda.RData")
 set.seed(2023)
 library(rsample)
 library(dplyr)
@@ -64,6 +63,9 @@ library(ggplot2)
 Considere o conjunto de dados de Expectativa de vida versus PIB per Capita. Considere a função g uma regressão polinomia. Utilizando o erro quadrático médio observado, sem fazer nenhuma estratégia de divisão dos dados, implemente um código em R para checar qual o melhor modelo. p = 1, ..., 50.
 
 ```{r, warning=FALSE}
+rm(list = ls())
+load("dados_expectativa_renda.RData")
+set.seed(2023)
 p = 50
 dados_exp <- dados_expectativa_renda[,-1]
 colnames(dados_exp) <- c("y", "x")
@@ -101,6 +103,12 @@ g
 Refaça o exercício anterior do polinômio, utilizando a estratégia de data splitting, em que divide-se o conjunto de dados em treinamento e teste. Utilize o conjunto de teste para calcular a estimativa do risco, usando o EQM.
 
 ```{r, warning=FALSE}
+rm(list = ls())
+load("dados_expectativa_renda.RData")
+set.seed(2023)
+p = 50
+dados_exp <- dados_expectativa_renda[,-1]
+colnames(dados_exp) <- c("y", "x")
 dados_exp <- initial_split(dados_exp, prop = 3/4)
 trainer <- training(dados_exp)
 tester <- testing(dados_exp)
@@ -126,8 +134,7 @@ for(i in 1:p){
 colnames(eqm2) <- c("P", "EQM")
 g <- ggplot(eqm2, aes(P, EQM)) + 
   geom_line(linetype = 2, size = 0.4) + 
-  geom_point(size = 2, aes(colour = EQM)) +
-  scale_fill_brewer(palette = 1) + 
+  geom_point(size = 2, aes(colour = -EQM)) +
   labs(x = "P", y = "EQM",
        title = "Avaliação do EQM",
        subtitle = "Repartindo conjunto treino/teste, sem validação cruzada") +
@@ -136,3 +143,105 @@ g <- ggplot(eqm2, aes(P, EQM)) +
 g
 
 ```
+
+## Questão:
+
+Ainda considerando o exercício do polinômio, implemente uma estratégia de leave-one-out cross-validation e selecione o melhor modelo minimizando a função de risco.
+
+```{r, warning=FALSE}
+rm(list = ls())
+load("dados_expectativa_renda.RData")
+set.seed(2023)
+p = 50
+dados_exp <- dados_expectativa_renda[,-1]
+colnames(dados_exp) <- c("y", "x")
+dados_exp <- initial_split(dados_exp, prop = 3/4)
+trainer <- training(dados_exp)
+tester <- testing(dados_exp)
+
+leave <- loo_cv(trainer)
+
+results1 <- data.frame(P = NA, EQM = NA)
+for(b in 1:dim(leave)[1]){
+  eqm <- NULL
+  
+  for(i in 1:p){
+    if(i > 1){
+      temp_trainer <- leave$splits[[b]] %>% analysis()
+      temp_tester <- leave$splits[[b]] %>% assessment()
+      for(j in 2:i){
+        temp_trainer <- cbind(temp_trainer, temp_trainer$x^j)
+        temp_tester <- cbind(temp_tester, temp_tester$x^j)
+        colnames(temp_trainer) <- c("y", "x", paste0("x", 2:j))
+        colnames(temp_tester) <- c("y", "x", paste0("x", 2:j))
+      }
+      
+      fit <- lm(y~., temp_trainer)
+      eqm[i] <- as.numeric((temp_tester[,1] - predict(fit, temp_tester))^2)
+    }
+    else{
+      temp_trainer <- leave$splits[[b]] %>% analysis()
+      temp_tester <- leave$splits[[b]] %>% assessment()
+      fit <- lm(y~., temp_trainer)
+      eqm[i] <- as.numeric((temp_tester[,1] - predict(fit, newdata = temp_tester))^2)
+    }
+  }
+  
+  results1[b,1] <- which(eqm == min(eqm))[1]
+  results1[b,2] <- min(eqm) 
+}
+```
+
+
+`Resposta:` Polinômio de Grau `r results1[which(results1$EQM == min(results1)),1]` apresentou o menor EQM, no valor de `r min(results1)`.
+
+## Questão:
+
+Por fim, considerando o exercício do polinômio, rafaça-o utilizando um procedimento de k-fold cross-validation. Considere k=5. Dica: considere utilizar a biblioteca rsample.
+
+```{r, warning=FALSE}
+rm(list = ls())
+load("dados_expectativa_renda.RData")
+set.seed(2023)
+p = 50
+k = 5
+dados_exp <- dados_expectativa_renda[,-1]
+colnames(dados_exp) <- c("y", "x")
+dados_exp <- initial_split(dados_exp, prop = 3/4)
+trainer <- training(dados_exp)
+tester <- testing(dados_exp)
+
+vfold <- vfold_cv(trainer, v = 5)
+
+results2 <- data.frame(P = NA, EQM = NA)
+for(b in 1:dim(vfold)[1]){
+  eqm <- NULL
+  
+  for(i in 1:p){
+    if(i > 1){
+      temp_trainer <- vfold$splits[[b]] %>% analysis()
+      temp_tester <- vfold$splits[[b]] %>% assessment()
+      for(j in 2:i){
+        temp_trainer <- cbind(temp_trainer, temp_trainer$x^j)
+        temp_tester <- cbind(temp_tester, temp_tester$x^j)
+        colnames(temp_trainer) <- c("y", "x", paste0("x", 2:j))
+        colnames(temp_tester) <- c("y", "x", paste0("x", 2:j))
+      }
+      
+      fit <- lm(y~., temp_trainer)
+      eqm[i] <- mean((temp_tester[,1] - predict(fit, newdata = temp_tester))^2)
+    }
+    else{
+      temp_trainer <- vfold$splits[[b]] %>% analysis()
+      temp_tester <- vfold$splits[[b]] %>% assessment()
+      fit <- lm(y~., temp_trainer)
+      eqm[i] <- apply((temp_tester[,1] - predict(fit, newdata = temp_tester))^2, MARGIN = 2, mean)
+    }
+  }
+  results2[b,1] <- which(eqm == min(eqm))[1]
+  results2[b,2] <- min(eqm) 
+}
+```
+
+
+`Resposta:` Polinômio de Grau `r results2[which(results2$EQM == min(results2$EQM)),1]` apresentou o menor EQM, no valor de `r min(results2$EQM)` para o método k-fold, k=5.
