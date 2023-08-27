@@ -64,7 +64,7 @@ Considere o conjunto de dados de Expectativa de vida versus PIB per Capita. Cons
 
 ```{r, warning=FALSE}
 rm(list = ls())
-load("dados_expectativa_renda.RData")
+dados_expectativa_renda <- read.csv("dados_expectativa_renda.csv")
 set.seed(2023)
 p = 50
 dados_exp <- dados_expectativa_renda[,-1]
@@ -104,7 +104,7 @@ Refaça o exercício anterior do polinômio, utilizando a estratégia de data sp
 
 ```{r, warning=FALSE}
 rm(list = ls())
-load("dados_expectativa_renda.RData")
+dados_expectativa_renda <- read.csv("dados_expectativa_renda.csv")
 set.seed(2023)
 p = 50
 dados_exp <- dados_expectativa_renda[,-1]
@@ -127,7 +127,7 @@ for(i in 1:p){
   }
   else{
     fit <- lm(y~., trainer)
-    eqm2[i,2] <- apply((tester[,1] - predict(fit, tester))^2, MARGIN = 2, FUN = mean)
+    eqm2[i,2] <- mean((tester[,1] - predict(fit, tester))^2)
   }
 }
 
@@ -150,7 +150,7 @@ Ainda considerando o exercício do polinômio, implemente uma estratégia de lea
 
 ```{r, warning=FALSE}
 rm(list = ls())
-load("dados_expectativa_renda.RData")
+dados_expectativa_renda <- read.csv("dados_expectativa_renda.csv")
 set.seed(2023)
 p = 50
 dados_exp <- dados_expectativa_renda[,-1]
@@ -201,7 +201,7 @@ Por fim, considerando o exercício do polinômio, rafaça-o utilizando um proced
 
 ```{r, warning=FALSE}
 rm(list = ls())
-load("dados_expectativa_renda.RData")
+dados_expectativa_renda <- read.csv("dados_expectativa_renda.csv")
 set.seed(2023)
 p = 50
 k = 5
@@ -235,7 +235,7 @@ for(b in 1:dim(vfold)[1]){
       temp_trainer <- vfold$splits[[b]] %>% analysis()
       temp_tester <- vfold$splits[[b]] %>% assessment()
       fit <- lm(y~., temp_trainer)
-      eqm[i] <- apply((temp_tester[,1] - predict(fit, newdata = temp_tester))^2, MARGIN = 2, mean)
+      eqm[i] <- mean((temp_tester[,1] - predict(fit, newdata = temp_tester))^2)
     }
   }
   results2[b,1] <- which(eqm == min(eqm))[1]
@@ -245,3 +245,187 @@ for(b in 1:dim(vfold)[1]){
 
 
 `Resposta:` Polinômio de Grau `r results2[which(results2$EQM == min(results2$EQM)),1]` apresentou o menor EQM, no valor de `r min(results2$EQM)` para o método k-fold, k=5.
+
+
+
+## Questão:
+
+Utilizando os dados de vinho vermelho, faça uma pequena análise exploratória dos dados. No link do Kaggle você consegue uma explicação sobre o que significa cada uma das variáveis. 
+
+```{r, warning=FALSE}
+library(tidymodels)
+library(tibble)
+library(purrr)
+library(ggplot2)
+library(patchwork)
+
+tidymodels::tidymodels_prefer()
+
+```
+
+
+```{r, warning=FALSE}
+rm(list = ls())
+wine <- read.csv("winequality-red.csv")
+skimr::skim(wine)
+```
+
+Nosso banco de dados conta com 1599 observações e 12 variáveis numéricas, sendo 3 variáveis discretas e 9 contínuas. Abaixo uma breve descrição de cada uma das variáveis:
+
+1.  Acidez Fixa;
+
+2.  Acidez Volátil;
+
+3.  Ácido cítrico -- É um ácido constituido das uvas que proporciona a sensação de frescor, podendo ser adicionado para aumentar a acidez;
+
+4.  Açúcar residual -- Açucar que resta no vinho após sua fermentação alcoolíca;
+
+5.  Cloretos -- São sais minerais;
+
+6.  Dióxido de enxofre livre -- Químico responsável por evitar a oxidação do vinho;
+
+7.  Dióxido de enxofre total -- Soma do dióxido de enxofre livre mais o combinado existente no vinho;
+
+8.  Densidade -- É a massa volumêtrica do vinho sob a massa volumétrica da água;
+
+9.  Ph -- Concentraçao de Ions de hidrogênio (H+) livres em uma solução de vinho;
+
+10. Sulfatos;
+
+11. Álcool -- Quantidade de Alcool;
+
+12. Qualidade -- Uma pontuação entre 0 e 10;
+
+## Questão:
+
+obtenha o melhor modelo de regressão linear para modelar a qualidade do vinho, considerando: Método dos Mínimos Quadrados, Regressão Ridge, Regressão Lasso, Elastic Net.
+Selecione o melhor modelo para cada uma das classes e contrua uma tabela com o risco estimado. Ao fim construir quatro gráficos mostrando cada um dos ajustes.
+
+```{r, warning=FALSE}
+colnames(wine) <- c(paste0("x", 1:11), "y")
+#Data split
+wine <- initial_split(wine, prop = 3/4)
+
+trainer <- training(wine)
+tester <- testing(wine)
+
+#Setting Engine
+modelo_eqm <- 
+  linear_reg(penalty = 0, mixture = 0) %>% 
+  set_mode("regression") %>% 
+  set_engine("glmnet")
+
+modelo_ridge <- 
+  linear_reg(penalty = tune::tune(), mixture = 0) %>% 
+  set_mode("regression") %>% 
+  set_engine("glmnet")
+
+modelo_lasso <- 
+  parsnip::linear_reg(penalty = tune::tune(), mixture = 1) %>% 
+  set_mode("regression") %>% 
+  parsnip::set_engine("glmnet")
+
+modelo_elastic <- 
+  parsnip::linear_reg(penalty = tune::tune(), mixture = tune::tune()) %>% 
+  set_mode("regression") %>% 
+  parsnip::set_engine("glmnet")
+
+
+#workflow
+all_wf <- 
+  workflow_set(
+    preproc = list(y ~ . ),
+    models = list(eqm = modelo_eqm, ridge = modelo_ridge, lasso = modelo_lasso, elastic = modelo_elastic), 
+    cross = TRUE
+  )
+
+#cross-validation
+set.seed(2023)
+cv <- rsample::vfold_cv(trainer, v = 5L)
+
+#metrics
+metrica <- yardstick::metric_set(rmse)
+
+#tunning
+tunagem <- 
+  all_wf %>%  
+  workflow_map(
+    seed = 2023, 
+    verbose = TRUE,
+    resamples = cv,
+    grid = 50,
+    metrics = metrica
+  )
+
+#melhores modelos
+modelos_rank <- tunagem %>% rank_results()
+
+melhor_eqm <- 
+  tunagem %>% 
+  extract_workflow_set_result("formula_eqm") %>% 
+  select_best("rmse")
+
+melhor_ridge <- 
+  tunagem %>% 
+  extract_workflow_set_result("formula_ridge") %>% 
+  select_best("rmse")
+
+melhor_lasso <- 
+  tunagem %>% 
+  extract_workflow_set_result("formula_lasso") %>% 
+  select_best("rmse")
+
+melhor_elastic <- 
+  tunagem %>% 
+  extract_workflow_set_result("formula_elastic") %>% 
+  select_best("rmse")
+
+finalizando_eqm <- 
+  tunagem %>% 
+  extract_workflow("formula_eqm") %>% 
+  finalize_workflow(melhor_eqm) %>% 
+  last_fit(split = wine)
+
+finalizando_ridge <- 
+  tunagem %>% 
+  extract_workflow("formula_ridge") %>% 
+  finalize_workflow(melhor_ridge) %>% 
+  last_fit(split = wine)
+
+finalizando_lasso <- 
+  tunagem %>% 
+  extract_workflow("formula_lasso") %>% 
+  finalize_workflow(melhor_lasso) %>% 
+  last_fit(split = wine)
+
+finalizando_elastic <- 
+  tunagem %>% 
+  extract_workflow("formula_elastic") %>% 
+  finalize_workflow(melhor_elastic) %>% 
+  last_fit(split = wine)
+
+# # Visualizando as métricas
+# finalizando_eqm %>% collect_metrics()
+# finalizando_ridge %>% collect_metrics()
+# finalizando_lasso %>% collect_metrics()
+# finalizando_elastic %>% collect_metrics()
+# 
+# # Visualizando predições:
+# finalizando_eqm %>% collect_predictions()
+# finalizando_ridge %>% collect_predictions()
+# finalizando_lasso %>% collect_predictions()
+# finalizando_elastic %>% collect_predictions()
+
+```
+
+```{r, warning=FALSE}
+knitr::kable(data.frame(row.names = c("EQM", "Ridge", "Lasso", "Elastic"), 
+                        "RMSE" = as.numeric(c((finalizando_eqm |> collect_metrics())[1,3],
+                                              (finalizando_ridge |> collect_metrics())[1,3],
+                                              (finalizando_lasso |> collect_metrics())[1,3],
+                                              (finalizando_elastic |> collect_metrics())[1,3])))
+             
+             
+)
+```
+
