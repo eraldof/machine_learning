@@ -50,12 +50,17 @@ Explique qual o motivo que faz com que o Erro Quadrático Médio - EQM para aval
 
 ```{r, warning=FALSE, message=FALSE}
 rm(list = ls())
-setwd("C:/Users/erald/Desktop/Faculdade/Aprendizagem de Maquina")
+setwd("C:/Users/erald/Desktop/Faculdade/Aprendizagem de Maquina/machine_learning/")
 set.seed(2023)
 library(rsample)
 library(dplyr)
 library(ggplot2)
+library(tidymodels)
+library(tibble)
+library(purrr)
+library(patchwork)
 
+tidymodels::tidymodels_prefer()
 ```
 
 ## Questão:
@@ -253,13 +258,6 @@ for(b in 1:dim(vfold)[1]){
 Utilizando os dados de vinho vermelho, faça uma pequena análise exploratória dos dados. No link do Kaggle você consegue uma explicação sobre o que significa cada uma das variáveis. 
 
 ```{r, warning=FALSE}
-library(tidymodels)
-library(tibble)
-library(purrr)
-library(ggplot2)
-library(patchwork)
-
-tidymodels::tidymodels_prefer()
 
 ```
 
@@ -302,6 +300,9 @@ obtenha o melhor modelo de regressão linear para modelar a qualidade do vinho, 
 Selecione o melhor modelo para cada uma das classes e contrua uma tabela com o risco estimado. Ao fim construir quatro gráficos mostrando cada um dos ajustes.
 
 ```{r, warning=FALSE}
+rm(list = ls())
+setwd("C:/Users/erald/Desktop/Faculdade/Aprendizagem de Maquina/machine_learning/")
+wine <- read.csv("winequality-red.csv")
 colnames(wine) <- c(paste0("x", 1:11), "y")
 #Data split
 wine <- initial_split(wine, prop = 3/4)
@@ -310,7 +311,7 @@ trainer <- training(wine)
 tester <- testing(wine)
 
 #Setting Engine
-modelo_eqm <- 
+modelo_mmo <- 
   linear_reg(penalty = 0, mixture = 0) %>% 
   set_mode("regression") %>% 
   set_engine("glmnet")
@@ -335,7 +336,7 @@ modelo_elastic <-
 all_wf <- 
   workflow_set(
     preproc = list(y ~ . ),
-    models = list(eqm = modelo_eqm, ridge = modelo_ridge, lasso = modelo_lasso, elastic = modelo_elastic), 
+    models = list(mmo = modelo_mmo, ridge = modelo_ridge, lasso = modelo_lasso, elastic = modelo_elastic), 
     cross = TRUE
   )
 
@@ -360,9 +361,9 @@ tunagem <-
 #melhores modelos
 modelos_rank <- tunagem %>% rank_results()
 
-melhor_eqm <- 
+melhor_mmo <- 
   tunagem %>% 
-  extract_workflow_set_result("formula_eqm") %>% 
+  extract_workflow_set_result("formula_mmo") %>% 
   select_best("rmse")
 
 melhor_ridge <- 
@@ -380,10 +381,10 @@ melhor_elastic <-
   extract_workflow_set_result("formula_elastic") %>% 
   select_best("rmse")
 
-finalizando_eqm <- 
+finalizando_mmo <- 
   tunagem %>% 
-  extract_workflow("formula_eqm") %>% 
-  finalize_workflow(melhor_eqm) %>% 
+  extract_workflow("formula_mmo") %>% 
+  finalize_workflow(melhor_mmo) %>% 
   last_fit(split = wine)
 
 finalizando_ridge <- 
@@ -404,28 +405,259 @@ finalizando_elastic <-
   finalize_workflow(melhor_elastic) %>% 
   last_fit(split = wine)
 
-# # Visualizando as métricas
-# finalizando_eqm %>% collect_metrics()
-# finalizando_ridge %>% collect_metrics()
-# finalizando_lasso %>% collect_metrics()
-# finalizando_elastic %>% collect_metrics()
-# 
-# # Visualizando predições:
-# finalizando_eqm %>% collect_predictions()
-# finalizando_ridge %>% collect_predictions()
-# finalizando_lasso %>% collect_predictions()
-# finalizando_elastic %>% collect_predictions()
 
 ```
 
 ```{r, warning=FALSE}
-knitr::kable(data.frame(row.names = c("EQM", "Ridge", "Lasso", "Elastic"), 
-                        "RMSE" = as.numeric(c((finalizando_eqm |> collect_metrics())[1,3],
-                                              (finalizando_ridge |> collect_metrics())[1,3],
-                                              (finalizando_lasso |> collect_metrics())[1,3],
-                                              (finalizando_elastic |> collect_metrics())[1,3])))
+knitr::kable(data.frame(row.names = c("MMO", "Ridge", "Lasso", "Elastic"), 
+                        "RMSE" = as.numeric(c((finalizando_mmo  %>%  collect_metrics())[1,3],
+                                              (finalizando_ridge %>% collect_metrics())[1,3],
+                                              (finalizando_lasso %>% collect_metrics())[1,3],
+                                              (finalizando_elastic %>% collect_metrics())[1,3])))
              
              
 )
+
+data_temp <- data.frame(ychapeu_mmo = (finalizando_mmo %>% collect_predictions())[2],
+                        ychapeu_ridge = (finalizando_ridge %>% collect_predictions())[2],
+                        ychapeu_lasso = (finalizando_lasso %>% collect_predictions())[2],
+                        ychapeu_elastic = (finalizando_elastic %>% collect_predictions())[2],
+                        y = (finalizando_elastic %>% collect_predictions())[4]
+)
+
+colnames(data_temp) <- c("ychapeu_mmo", "ychapeu_ridge", "ychapeu_lasso", "ychapeu_elastic", "y")
+data_temp <- as_tibble(data_temp)
+
+
+graph <- ggplot(data_temp, aes(x = ychapeu_mmo, y = y)) +
+  geom_point() + geom_line(aes(y = ychapeu_mmo), colour = "red", size = 1) +
+  labs(title = "Reta ajustada", subtitle = "y_ajustado vs y_real do modelo MMO")
+
+graph
 ```
 
+Fazendo pelo GLMNET -
+
+```{r}
+rm(list = ls())
+setwd("C:/Users/erald/Desktop/Faculdade/Aprendizagem de Maquina/machine_learning/")
+wine <- read.csv("winequality-red.csv")
+
+colnames(wine) <- c(paste0("x", 1:11), "y")
+#Data split
+wine <- initial_split(wine, prop = 3/4)
+
+trainer <- training(wine)
+tester <- testing(wine)
+
+features <- trainer[,-12] %>% as.matrix()
+ytrainer <- trainer[,12] %>% as.matrix()
+testfeatures <- tester[,-12] %>% as.matrix()
+ytest <- tester[,12] %>% as.matrix()
+
+#MMO
+
+fit <- glmnet(x = features, y = ytrainer, alpha = 0, lambda = 0)
+preditos <- predict(fit, newx = testfeatures)
+eqm_mmo <- mean((preditos - ytest)^2)
+
+
+#Ridge
+cvridge <- cv.glmnet(x = features, y = ytrainer, alpha = 0, nfolds = 5)
+fit2 <- glmnet(x = features, y = ytrainer, alpha = 0)
+preditos_ridge <- predict(fit2, s = cvridge$lambda.1se, newx = testfeatures)
+eqm_ridge <- mean((preditos_ridge - ytest)^2)
+
+#Lasso
+cvlasso <- cv.glmnet(x = features, y = ytrainer, alpha = 1, nfolds = 5)
+fit3 <- glmnet(x = features, y = ytrainer, alpha = 1)
+preditos_lasso <- predict(fit3, s = cvlasso$lambda.1se, newx = testfeatures)
+eqm_lass <- mean((preditos_lasso - ytest)^2)
+
+#Elastic-net
+#Precisamos estipular o melhor alpha através de uma validaçao cruzada.
+#Utilizando 5-folds.
+eqm_elastic <- NULL
+alpha_values <- seq(0.01, 0.999, length.out = 500)
+for(a in alpha_values){
+  cvelastic <- cv.glmnet(x = features, y = ytrainer, alpha = a, nfolds = 5)
+  tempfit <- glmnet(x = features, y = ytrainer, alpha = a)
+  preditos_elastic <- predict(tempfit, s = cvelastic$lambda.1se, newx = testfeatures)
+  eqm_elastic <- c(eqm_elastic, 
+                   mean((preditos_elastic - ytest)^2)) 
+}
+min(eqm_elastic)
+alpha_values[which(eqm_elastic == min(eqm_elastic))]
+
+#############
+
+knitr::kable(data.frame(row.names = c("MMO", "Ridge", "Lasso", "Elastic"),
+                        "EQM" = c(eqm_mmo, eqm_ridge, eqm_lass, min(eqm_elastic)),
+                        "RMSE" = sqrt(c(eqm_mmo, eqm_ridge, eqm_lass, min(eqm_elastic)))
+                        )
+)
+```
+
+## Questão:
+
+Considere agora o conjunto de dados de despesas médicas. Refaça o mesmo exercício dos dados de vinho vermelho, em que aqui, o objetivo é prever a variável charges. Perceba que algumas variáveis são qualitativas, e portanto, você deverá transformá-las em dummy. Indique os melhores cenários dos quatro modelos e informe qual modelo você utilizaria. Explique! Dica: usando a função step_dummy() da biblioteca recipes, você poderá facilmente transformar variáveis qualitativas em numéricas.
+
+```{r}
+rm(list = ls())
+setwd("C:/Users/erald/Desktop/Faculdade/Aprendizagem de Maquina/machine_learning/")
+insurance <- read.csv("insurance.csv")
+
+#Transformando qualitativas em numéricas
+df <- recipe(charges ~., data = insurance) %>% 
+  step_dummy(all_nominal(), -all_outcomes()) %>% 
+  prep() %>% juice() 
+
+knitr::kable(df %>% head(10), format = "html")
+```
+
+
+```{r}
+df <- initial_split(df, prop = 3/4)
+
+trainer <- training(df)
+tester <- testing(df)
+
+#Setting Engine
+modelo_mmo <- 
+  linear_reg(penalty = 0, mixture = 0) %>% 
+  set_mode("regression") %>% 
+  set_engine("glmnet")
+
+modelo_ridge <- 
+  linear_reg(penalty = tune::tune(), mixture = 0) %>% 
+  set_mode("regression") %>% 
+  set_engine("glmnet")
+
+modelo_lasso <- 
+  parsnip::linear_reg(penalty = tune::tune(), mixture = 1) %>% 
+  set_mode("regression") %>% 
+  parsnip::set_engine("glmnet")
+
+modelo_elastic <- 
+  parsnip::linear_reg(penalty = tune::tune(), mixture = tune::tune()) %>% 
+  set_mode("regression") %>% 
+  parsnip::set_engine("glmnet")
+
+
+#workflow
+all_wf <- 
+  workflow_set(
+    preproc = list(charges ~ . ),
+    models = list(mmo = modelo_mmo, ridge = modelo_ridge, lasso = modelo_lasso, elastic = modelo_elastic), 
+    cross = TRUE
+  )
+
+#cross-validation
+set.seed(2023)
+cv <- rsample::vfold_cv(trainer, v = 5L)
+
+#metrics
+metrica <- yardstick::metric_set(rmse)
+
+#tunning
+tunagem <- 
+  all_wf %>%  
+  workflow_map(
+    seed = 2023, 
+    verbose = TRUE,
+    resamples = cv,
+    grid = 50,
+    metrics = metrica
+  )
+
+#melhores modelos
+modelos_rank <- tunagem %>% rank_results()
+
+melhor_mmo <- 
+  tunagem %>% 
+  extract_workflow_set_result("formula_mmo") %>% 
+  select_best("rmse")
+
+melhor_ridge <- 
+  tunagem %>% 
+  extract_workflow_set_result("formula_ridge") %>% 
+  select_best("rmse")
+
+melhor_lasso <- 
+  tunagem %>% 
+  extract_workflow_set_result("formula_lasso") %>% 
+  select_best("rmse")
+
+melhor_elastic <- 
+  tunagem %>% 
+  extract_workflow_set_result("formula_elastic") %>% 
+  select_best("rmse")
+
+finalizando_mmo <- 
+  tunagem %>% 
+  extract_workflow("formula_mmo") %>% 
+  finalize_workflow(melhor_mmo) %>% 
+  last_fit(split = df)
+
+finalizando_ridge <- 
+  tunagem %>% 
+  extract_workflow("formula_ridge") %>% 
+  finalize_workflow(melhor_ridge) %>% 
+  last_fit(split = df)
+
+finalizando_lasso <- 
+  tunagem %>% 
+  extract_workflow("formula_lasso") %>% 
+  finalize_workflow(melhor_lasso) %>% 
+  last_fit(split = df)
+
+finalizando_elastic <- 
+  tunagem %>% 
+  extract_workflow("formula_elastic") %>% 
+  finalize_workflow(melhor_elastic) %>% 
+  last_fit(split = df)
+
+
+knitr::kable(data.frame(row.names = c("MMO", "Ridge", "Lasso", "Elastic"), 
+                        "RMSE" = as.numeric(c((finalizando_mmo  %>%  collect_metrics())[1,3],
+                                              (finalizando_ridge %>% collect_metrics())[1,3],
+                                              (finalizando_lasso %>% collect_metrics())[1,3],
+                                              (finalizando_elastic %>% collect_metrics())[1,3])))
+)
+
+
+
+
+data_temp <- data.frame(ychapeu_mmo = (finalizando_mmo %>% collect_predictions())[2],
+                        ychapeu_ridge = (finalizando_ridge %>% collect_predictions())[2],
+                        ychapeu_lasso = (finalizando_lasso %>% collect_predictions())[2],
+                        ychapeu_elastic = (finalizando_elastic %>% collect_predictions())[2],
+                        y = (finalizando_elastic %>% collect_predictions())[4]
+)
+
+colnames(data_temp) <- c("ychapeu_mmo", "ychapeu_ridge", "ychapeu_lasso", "ychapeu_elastic", "y")
+data_temp <- as_tibble(data_temp)
+
+
+g1 <- ggplot(data_temp, aes(x = ychapeu_mmo, y = y)) +
+  geom_point() + geom_line(aes(y = ychapeu_mmo), colour = "#191970", size = 1) +
+  labs(title = "Modelo MMO", subtitle = "y_ajustado vs y_real")
+
+g2 <- ggplot(data_temp, aes(x = ychapeu_ridge, y = y)) +
+  geom_point() + geom_line(aes(y = ychapeu_ridge), colour = "#4169E1", size = 1) +
+  labs(title = "Modelo ridge", subtitle = "y_ajustado vs y_real")
+
+g3 <- ggplot(data_temp, aes(x = ychapeu_lasso, y = y)) +
+  geom_point() + geom_line(aes(y = ychapeu_lasso), colour = "orange", size = 1) +
+  labs(title = "Modelo lasso", subtitle = "y_ajustado vs y_real")
+
+g4 <- ggplot(data_temp, aes(x = ychapeu_elastic, y = y)) +
+  geom_point() + geom_line(aes(y = ychapeu_elastic), colour = "red", size = 1) +
+  labs(title = "Modelo elastic", subtitle = "y_ajustado vs y_real")
+
+
+(g1 + g2) / (g3 + g4)
+
+```
+
+`resposta:` Escolheria o modelo de Regressão Elastic pelo fato da raiz quadrada do erro quadrado médio ser o menor entre os 3 modelos anteriores. Além disso, ele foi o que mais rápido se ajustou aos dados. 
