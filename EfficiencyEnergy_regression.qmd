@@ -1,0 +1,231 @@
+---
+title: "Effiency Energy - Regression"
+author: "Eraldo Rocha"
+format: 
+  html:
+    theme: lux
+    code-fold: show
+    code-tools: true
+    code-block-bg: true
+    code-block-border-left: "#9400D3"
+    highlight-style: github
+    code-link: true
+    toc: true 
+    toc-title: Sumário
+    toc-location: left
+    toc-depth: 2
+    number-sections: true
+    number-depth: 3
+    smooth-scroll: true
+    link-external-newwindow: true
+fig-dpi: 1000
+self-contained: true
+page-layout: full
+editor: source
+---
+
+```{r, warning=FALSE}
+library(tidymodels)
+tidymodels_prefer()
+
+```
+
+# Sobre o dataset:
+
+O banco de dados pode ser encontrado no [Kaggle](https://www.kaggle.com/datasets/ujjwalchowdhury/energy-efficiency-data-set/data). Trata-se de um estudo que buscou avaliar os requisitos de carga de aquecimento e resfriamento dos edifícios, isto é, a eficiência energética em função dos parâmetros do edifício.
+
+Foram feitas análises de energia usando 12 formatos de edifícios diferentes simulados no Ecotect. Os edifícios diferem no que diz respeito à área envidraçaada, à distribuição da área envidraçada e à orientação, entre outros parâmetros.
+
+```{r}
+rm(list = ls())
+setwd("C:/Users/erald/Desktop/Faculdade/Aprendizagem de Maquina/machine_learning")
+data <- read.csv("energy_efficiency_data.csv")
+skimr::skim(data)
+```
+
+O banco de dados possui 768 observações e 10 variáveis sendo elas 8 features e 2 labels, sendo todas do tipo númerico. Com o objetivo de não se estender nos comentários, irei considerar apenas a variável `Cooling_Load` como a label de interesse, isto é, a variável resposta do nosso modelo. Como o banco de dados não possui nenhum dado faltante, irei realizar a remoção de algumas observações de 2 features e imputar elas novamente utilizando o método `KNN`.
+
+```{r}
+set.seed(0)
+id <- sample(1:nrow(data), 0.1 * nrow(data))
+feature <- sample(1:ncol(data), 2)
+data[id,feature[1]] <- NA
+id <- sample(1:nrow(data), 0.1 * nrow(data))
+data[id, feature[2]] <- NA
+rm(id)
+rm(feature)
+visdat::vis_dat(data)
+visdat::vis_cor(data)
+```
+
+Como podemos observar no plot acima, agora nosso dataset possui informações faltantes. Além disso, podemos observar a correlação das variáveis, onde algumas delas possuem uma correlação positiva e negativa bem forte.
+
+# Iniciando o Worflow
+
+## Divisão
+
+Faremos uma divisão de 80% para o conjunto de treino e 20% para o conjunto de teste e iremos estratificar pela label `Cooling_Load`. Ou seja, queremos que nossa divisão esteja o mais bem representado possível.
+
+```{r}
+set.seed(0)
+splitted <- initial_split(data, prop = 0.8, strata = "Cooling_Load")
+treinamento <- training(splitted)
+teste <- testing(splitted)
+```
+
+## Receita
+
+Na receita iremos utilizar `KNN` para imputar os valores faltantes, aplicaremos a transformação de `Yeo–Johnson`, normalizaremos os dados e removeremos as variáveis preditoras altamente correlacionadas.
+
+```{r}
+receita <- recipe(formula = Cooling_Load~. , data) %>% 
+  step_impute_knn(all_predictors(), impute_with = c("Relative_Compactness", "Surface_Area", "Wall_Area", "Roof_Area", "Overall_Height"), neighbors = 10) %>% 
+  step_YeoJohnson(all_predictors()) %>% 
+  step_normalize(all_predictors()) %>% 
+  step_corr(all_predictors())
+```
+
+Através do `prep()` e `juice` podemos "preparar" nossa receita e observar o que foi feito no passo anterior.
+
+```{r}
+receita %>% 
+  prep() %>% 
+  juice() 
+```
+
+A ordem em que a receita foi escrita é a ordem em que ela será realizada. Isto é, em caso de variáveis faltantes não faz sentido deixar o passo da imputação por `KNN` por último. Na receita acima, poderia ser realizado um `tune` para escolher o número de vizinhos a serem considerados na imputação. Além disso, foram consideradas apenas 5 features para auxiliar na imputação dos dados faltantes.
+
+## Modelos
+
+```{r}
+elastic <- 
+  linear_reg(penalty = tune(), mixture = tune()) |> 
+  set_mode("regression") |> 
+  set_engine("glmnet")
+
+knn <-
+  nearest_neighbor(
+    neighbors = tune(),
+    dist_power = tune(), 
+    weight_func = "gaussian" 
+  ) |> 
+  set_mode("regression") |> 
+  set_engine("kknn")
+
+svm <- 
+  svm_rbf(
+    cost = tune(),
+    rbf_sigma = tune(),
+    margin = tune()
+  ) |> 
+  set_mode("regression") |> 
+  set_engine("kernlab")
+
+wf_knn <-
+  workflow() %>%
+  add_recipe(receita) %>%
+  add_model(knn)
+
+wf_elastic <- 
+  workflow() %>% 
+  add_recipe(receita) %>% 
+  add_model(elastic)
+
+wf_svm <-
+  workflow() %>%
+  add_recipe(receita) %>%
+  add_model(svm)
+
+grid_control <- control_grid(
+  save_pred = TRUE,
+  save_workflow = TRUE,
+  parallel_over = "resamples"
+)
+
+vfold <- 
+  treinamento |> 
+  vfold_cv(v = 10, strata = Cooling_Load)
+
+metrica <- metric_set(rmse)
+
+```
+
+## Criando um grid de hiperparametros
+```{r}
+set.seed(0)
+grid_knn <- grid_max_entropy(wf_knn %>% extract_parameter_set_dials(), size = 50L)
+grid_elastic <- grid_max_entropy(wf_elastic %>% extract_parameter_set_dials(), size = 50L)
+grid_svm <-  grid_max_entropy(wf_svm %>% extract_parameter_set_dials(), size = 50L)
+
+```
+
+## Selecionando os melhores hiperparametros
+```{r}
+tune_knn <- 
+  tune_grid(wf_knn,
+            grid = grid_knn,
+            resamples = vfold,
+            metrics = metrica,
+            control = grid_control,
+            )
+
+tune_elastic <- 
+  tune_grid(wf_elastic,
+            grid = grid_elastic,
+            resamples = vfold,
+            metrics = metrica,
+            control = grid_control)
+
+tune_svm <- 
+  tune_grid(wf_svm,
+            grid = grid_svm,
+            resamples = vfold,
+            metrics = metrica,
+            control = grid_control)
+
+
+wf_svm <- 
+  wf_svm |> 
+  finalize_workflow(select_best(tune_svm))
+
+wf_knn <- 
+  wf_knn %>% 
+  finalize_workflow(select_best(tune_knn))
+
+wf_elastic <- 
+  wf_elastic %>% 
+  finalize_workflow(select_best(tune_elastic))
+
+teste_knn <- 
+  wf_knn %>% 
+  last_fit(split = splitted)
+
+teste_elastic <- 
+  wf_elastic %>% 
+  last_fit(split = splitted)
+
+teste_svm <- 
+  wf_svm %>% 
+  last_fit(split = splitted)
+```
+
+## Avaliando o modelo no conjunto teste e selecionando o melhor baseando-se no menor EQM.
+```{r}
+teste_svm$.metrics
+teste_knn$.metrics
+teste_elastic$.metrics
+```
+
+## Ajuste final com toda a base de dados
+```{r}
+wf_final <- wf_knn %>% 
+  fit(data = data)
+```
+
+## Por fim os valores preditos vs o real
+
+```{r}
+yhat <- predict(wf_final, data)
+plot(yhat$.pred ~ data$Cooling_Load)
+```
+
