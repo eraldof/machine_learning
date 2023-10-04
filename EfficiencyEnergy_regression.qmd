@@ -38,8 +38,8 @@ Foram feitas análises de energia usando 12 formatos de edifícios diferentes si
 
 ```{r}
 rm(list = ls())
-setwd("C:/Users/erald/Desktop/Faculdade/Aprendizagem de Maquina/machine_learning")
-data <- read.csv("energy_efficiency_data.csv")
+url = "https://raw.githubusercontent.com/eraldof/machine_learning/main/energy_efficiency_data.csv"
+data <- read.csv(url)
 skimr::skim(data)
 ```
 
@@ -99,8 +99,8 @@ A ordem em que a receita foi escrita é a ordem em que ela será realizada. Isto
 
 ```{r}
 elastic <- 
-  linear_reg(penalty = tune(), mixture = tune()) |> 
-  set_mode("regression") |> 
+  linear_reg(penalty = tune(), mixture = tune()) %>% 
+  set_mode("regression") %>% 
   set_engine("glmnet")
 
 knn <-
@@ -108,8 +108,8 @@ knn <-
     neighbors = tune(),
     dist_power = tune(), 
     weight_func = "gaussian" 
-  ) |> 
-  set_mode("regression") |> 
+  ) %>% 
+  set_mode("regression") %>% 
   set_engine("kknn")
 
 svm <- 
@@ -117,24 +117,20 @@ svm <-
     cost = tune(),
     rbf_sigma = tune(),
     margin = tune()
-  ) |> 
-  set_mode("regression") |> 
+  ) %>% 
+  set_mode("regression") %>% 
   set_engine("kernlab")
 
-wf_knn <-
-  workflow() %>%
-  add_recipe(receita) %>%
-  add_model(knn)
-
-wf_elastic <- 
-  workflow() %>% 
-  add_recipe(receita) %>% 
-  add_model(elastic)
-
-wf_svm <-
-  workflow() %>%
-  add_recipe(receita) %>%
-  add_model(svm)
+all_wf <- 
+   workflow_set(
+     preproc = list(receita),
+     models = list(
+       modelo_knn = knn,
+       modelo_svm = svm,
+       modelo_elastic = elastic
+     )
+   ) %>%
+  mutate(wflow_id = gsub("(recipe_)", "", wflow_id))
 
 grid_control <- control_grid(
   save_pred = TRUE,
@@ -143,89 +139,87 @@ grid_control <- control_grid(
 )
 
 vfold <- 
-  treinamento |> 
+  treinamento %>% 
   vfold_cv(v = 10, strata = Cooling_Load)
 
 metrica <- metric_set(rmse)
-
 ```
 
 ## Criando um grid de hiperparametros
 ```{r}
 set.seed(0)
-grid_knn <- grid_max_entropy(wf_knn %>% extract_parameter_set_dials(), size = 50L)
-grid_elastic <- grid_max_entropy(wf_elastic %>% extract_parameter_set_dials(), size = 50L)
-grid_svm <-  grid_max_entropy(wf_svm %>% extract_parameter_set_dials(), size = 50L)
+grid_knn <- grid_max_entropy(all_wf %>% extract_parameter_set_dials("modelo_knn"), size = 100L)
+grid_elastic <- grid_max_entropy(all_wf %>% extract_parameter_set_dials("modelo_elastic"), size = 100L)
+grid_svm <-  grid_max_entropy(all_wf %>% extract_parameter_set_dials("modelo_svm"), size = 100L)
 
 ```
+
+## Agora que criamos um grid utilizando o max_entropy, precisamos utilizar o option_add para informar ao workflow quais grids serão utilizados para tunar cada modelo.
+
+```{r}
+all_wf <- 
+  all_wf %>% 
+  option_add(grid = grid_knn, id = 'modelo_knn') %>% 
+  option_add(grid = grid_elastic, id = 'modelo_elastic') %>% 
+  option_add(grid = grid_svm, id = 'modelo_svm')
+```
+
 
 ## Selecionando os melhores hiperparametros
 ```{r}
-tune_knn <- 
-  tune_grid(wf_knn,
-            grid = grid_knn,
-            resamples = vfold,
-            metrics = metrica,
-            control = grid_control,
-            )
-
-tune_elastic <- 
-  tune_grid(wf_elastic,
-            grid = grid_elastic,
-            resamples = vfold,
-            metrics = metrica,
-            control = grid_control)
-
-tune_svm <- 
-  tune_grid(wf_svm,
-            grid = grid_svm,
-            resamples = vfold,
-            metrics = metrica,
-            control = grid_control)
+inicio <- Sys.time()
+tunagem <- 
+  all_wf %>% 
+  workflow_map(
+    verbose = TRUE,
+    seed = 2023,
+    resamples = vfold,
+    control = grid_control,
+    metrics = metrica
+  )
+fim <- Sys.time()
 
 
-wf_svm <- 
-  wf_svm |> 
-  finalize_workflow(select_best(tune_svm))
-
-wf_knn <- 
-  wf_knn %>% 
-  finalize_workflow(select_best(tune_knn))
-
-wf_elastic <- 
-  wf_elastic %>% 
-  finalize_workflow(select_best(tune_elastic))
-
-teste_knn <- 
-  wf_knn %>% 
-  last_fit(split = splitted)
-
-teste_elastic <- 
-  wf_elastic %>% 
-  last_fit(split = splitted)
-
-teste_svm <- 
-  wf_svm %>% 
-  last_fit(split = splitted)
+```
+```{r}
+print(paste0("Tempo do treinamento: ", round(fim - inicio, 1), " minutos"))
 ```
 
-## Avaliando o modelo no conjunto teste e selecionando o melhor baseando-se no menor EQM.
+
+
+## Visualizando o top 1 de cada um dos 3 modelos
 ```{r}
-teste_svm$.metrics
-teste_knn$.metrics
-teste_elastic$.metrics
+autoplot(tunagem, select_best = T)
 ```
 
-## Ajuste final com toda a base de dados
+
+## Visualizando os parametros que acarretaram no menor EQM
 ```{r}
-wf_final <- wf_knn %>% 
-  fit(data = data)
+melhor <-   tunagem %>% 
+    extract_workflow_set_result("modelo_svm") %>% 
+    select_best()
+knitr::kable(melhor)
 ```
 
-## Por fim os valores preditos vs o real
+## Finalizando o modelo avaliando na base teste e por fim juntando a base completa.
+```{r}
+wf_final <- 
+  tunagem %>% extract_workflow("modelo_svm") %>% 
+  finalize_workflow(melhor)
+
+ajuste_final <- last_fit(wf_final, splitted)
+modelo_final <- wf_final %>% fit(data)
+```
+
+## Avalinado as métricas do modelo com o conjunto teste
 
 ```{r}
-yhat <- predict(wf_final, data)
-plot(yhat$.pred ~ data$Cooling_Load)
+knitr::kable(ajuste_final$.metrics) 
+```
+
+## Modelos preditos vs valores reais
+```{r}
+yhat <- predict(modelo_final, data)
+plot(yhat$.pred ~ data$Cooling_Load )
 ```
 
