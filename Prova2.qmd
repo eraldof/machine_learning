@@ -1,0 +1,845 @@
+---
+title: "Prova 2 - Machine Learning"
+author: "Eraldo Rocha"
+date: last-modified
+date-format: "DD MMM, YYYY"
+
+format: 
+  html:
+    theme: lux
+    code-fold: true
+    code-tools: true
+    code-block-bg: true
+    code-block-border-left: "#9400D3"
+    highlight-style: github
+    code-link: true
+    toc: true 
+    toc-title: Sumário
+    toc-location: left
+    toc-depth: 3
+    number-depth: 4
+    smooth-scroll: true
+    
+self-contained: true
+page-layout: full
+editor: source
+---
+
+::: callout-note
+## Nota
+
+Para **TODOS** os exercícios aqui apresentados, serão utilizados os modelos de `regressão elastic`, `KNN` e `svm`. Além disso, em alguns exercícios serão removidas algumas observações para a utilização do método KNN para imputa-los novamente.
+:::
+
+Carregando os pacotes
+
+```{r, warning=FALSE}
+rm(list=ls())
+library(tidymodels)
+tidymodels_prefer()
+```
+
+## Exercício 1
+
+Considere o problema em que o objetivo é prever a pontuação `perfomance index` do aluno com base em algumas variáveis. Avalie o poder preditivo do modelo selecionado. Sua análise deve conter uma análise exploratória dos dados, utilizar um esquema de `k-folds` cross-validation, com `k=20` e considerar um esquema de data splitting na proporção 90% para treino e 20% para teste.
+
+### Carregando o banco de dados:
+
+```{r}
+url = "https://raw.githubusercontent.com/eraldof/machine_learning/main/Student_Performance.csv"
+data1 <- read.csv(url)
+colnames(data1) <- c("Hours.Studied", "Previous.Scores", "Extracurricular.Activities", "Sleep.Hours", "Sample.Question.Papers.Practiced", "resultado_final")
+```
+
+### Analise exploratória:
+
+```{r}
+set.seed(2023)
+id <- sample(1:nrow(data1), 0.1 * nrow(data1))
+feature <- sample(1:(ncol(data1)-1), 2)
+data1[id,feature[1]] <- NA
+id <- sample(1:nrow(data1), 0.1 * nrow(data1))
+data1[id, feature[2]] <- NA
+rm(id)
+rm(feature)
+skimr::skim(data1)
+visdat::vis_dat(data1)
+visdat::vis_cor(data1[,-3])
+```
+
+O dataset possui 10 mil observações com 6 variáveis, sendo 5 do tipo númerica e 1 do tipo qualitativa nominal. Estamos interessados em prever a variável `resultado_final`, que é a nota obitida pelo aluno. Além disso, visualizando a primeira figura é possível notar que as variáveis *Horas de Estudo* e *Número de Questões Praticadas* possuem observações faltantes. Já na figura 2, vemos que uma forte correlação entre as variáveis *Resultados Anteriores* e *resultado_final*.
+
+### Tratamento dos dados e preparação da receita:
+
+```{r}
+set.seed(2023)
+splitted <- initial_split(data1, prop = 0.9, strata = resultado_final)
+treinamento <- training(splitted)
+teste <- testing(splitted)
+```
+
+```{r}
+receita <- recipe(formula = `resultado_final` ~ . , data1) %>% 
+  step_impute_knn(all_predictors(), 
+                  impute_with = c("Previous.Scores", "Sleep.Hours", "resultado_final"),
+                  neighbors = 15L) %>% 
+  step_dummy(`Extracurricular.Activities`)  %>% 
+  step_YeoJohnson(all_numeric_predictors()) %>% 
+  step_normalize(all_numeric_predictors())
+```
+
+::: callout-tip
+## Dica:
+
+Com esses comandos podemos avaliar os procedimentos da receita na base de dados:
+`receita %>% prep() %>% juice()` 
+:::
+
+O banco de dados foi repartido em 90% para a base de treinamento e 10% para a base de teste, além disso, foi aplicado os seguintes passos na receita:
+
+- `step_imput_knn()`: Para imputar as observações faltantes com base nas 3 variáveis numéricas que possuem total completude. Nessa etapa também poderiamos colocar um `tune()` no neighbors. 
+- `step_dummy()`: Para transformar a variável categórica em uma variável dummy;
+- `step_YeoJohnson()`: Uma transformação similar a box-cox, entretanto mais generalizada;
+- `step_normalize()`: Para normalizar as observações.
+
+::: callout-warning
+## Importante
+
+Na receita é necessário se atentar a ordem em que os passos são adicionados. Note que o dataset além de possuir valores faltantes, também conta com uma variável categórioca e para realizarmos as transformações é necessário que nosso dataset seja todo numérico. 
+:::
+
+### Configurando os modelos:
+
+```{r}
+elastic <- 
+  linear_reg(penalty = tune(),
+             mixture = tune()
+  ) %>% 
+  set_mode("regression") %>% 
+  set_engine("glmnet")
+
+knn <-
+  nearest_neighbor(
+    neighbors = tune()
+  ) %>% 
+  set_mode("regression") %>% 
+  set_engine("kknn")
+
+svm <-
+  svm_rbf(
+    cost = tune(),
+    rbf_sigma = tune(),
+    margin = tune()
+  ) %>%
+  set_mode("regression") %>%
+  set_engine("kernlab")
+
+all_wf <- 
+   workflow_set(
+     preproc = list(receita),
+     models = list(
+       modelo_knn = knn,
+       modelo_svm = svm,
+       modelo_elastic = elastic
+     ),
+     cross = TRUE
+   ) %>%
+  mutate(wflow_id = gsub("(recipe_)", "", wflow_id))
+
+grid_control <- control_grid(
+  save_pred = TRUE,
+  save_workflow = TRUE,
+  parallel_over = "resamples"
+)
+
+vfold <- 
+  treinamento %>% 
+  vfold_cv(v = 15L, strata = resultado_final)
+
+metrica <- metric_set(rmse)
+```
+
+::: callout-tip
+## Dica:
+
+Com a função `grid_max_entropy()` podemos criar um grid de hiperpametros mais diversificado e através do `option_add()` informamos ao workflow qual grid utilizar em cada um dos modelos.
+:::
+
+```{r}
+set.seed(2023)
+grid_knn <- grid_max_entropy(all_wf %>% extract_parameter_set_dials("modelo_knn"), size = 50L)
+grid_elastic <- grid_max_entropy(all_wf %>% extract_parameter_set_dials("modelo_elastic"), size = 100L)
+grid_svm <-  grid_max_entropy(all_wf %>% extract_parameter_set_dials("modelo_svm"), size = 30L)
+
+```
+
+
+```{r}
+all_wf <- 
+  all_wf %>% 
+  option_add(grid = grid_knn, id = 'modelo_knn') %>% 
+  option_add(grid = grid_elastic, id = 'modelo_elastic') %>%  
+  option_add(grid = grid_svm, id = 'modelo_svm')
+```
+
+### Treinamento e Seleção:
+
+```{r}
+tunagem <- 
+  all_wf %>% 
+  workflow_map(
+    verbose = TRUE,
+    seed = 2023,
+    resamples = vfold,
+    control = grid_control,
+    metrics = metrica
+  )
+```
+
+```{r}
+autoplot(
+  tunagem,
+  rank_metric = "rmse",
+  metric = "rmse",
+  select_best = TRUE
+) + 
+  labs(title = "Melhor resultado dos modelos")+ ylab("rmse")+ xlab("Ranking")
+```
+```{r}
+best = tunagem %>% 
+  extract_workflow_set_result("modelo_elastic") %>% 
+  select_best(metric = "rmse")
+
+best %>%
+  knitr::kable(caption = "Hiperparametros")
+```
+
+```{r}
+wf_final <- 
+  tunagem %>% extract_workflow("modelo_elastic") %>% 
+  finalize_workflow(best)
+
+teste <- 
+  wf_final %>%  
+  last_fit(split = splitted)
+
+knitr::kable(teste$.metrics, caption = "Resultados") 
+```
+
+```{r}
+modelo_final <- 
+  wf_final |> 
+  fit(data1)
+```
+
+
+## Salvando o modelo
+
+```{r}
+# Salvando o modelo em um arquivo serializado
+#saveRDS(modelo_final, file = "modelo_final.rds")
+
+# Lendo o arquivo serializado com o modelo final
+#load(file = "modelo_final.rds")
+
+# Fazendo novas previsões
+#head(data1)
+#predict(modelo_final, new_data = data1)
+```
+
+
+## Exercício 2
+
+Considere o problema em que o objetivo é prever o custo, `charge`, com base em algumas variáveis. Sua análise deve conter uma análise exploratória dos dados, deverá utilizar um esquema de `k-folds` cross-validation, com `k=20` e considerar um esquema de data splitting na proporção 90% para treino e 10% para teste.
+
+### Carregando o banco de dados
+
+```{r}
+url = "https://raw.githubusercontent.com/eraldof/machine_learning/main/insurance.csv"
+data2 <- read.csv(url)
+```
+
+### Analise exploratória:
+
+```{r}
+skimr::skim(data2)
+visdat::vis_dat(data2)
+visdat::vis_cor(data2[,-c(2,5,6)])
+```
+
+O dataset possui 1.338 observações com 7 variáveis, sendo 4 do tipo númerica e 3 do tipo qualitativa. Estamos interessados em prever a variável `charges` , que é o custo do seguro de vida. Além disso, visualizando a primeira figura é possível notar que não existem observações faltantes. Já na figura 2, vemos que existe pouca correlação entre as variáveis.
+
+### Tratamento dos dados e preparação da receita:
+
+```{r}
+set.seed(2023)
+splitted <- initial_split(data2, prop = 0.9, strata = charges)
+treinamento <- training(splitted)
+teste <- testing(splitted)
+```
+
+```{r}
+receita <- recipe(formula = `charges` ~ . , data2) %>% 
+  step_dummy(c(`sex`, `smoker`, `region`))  %>% 
+  step_YeoJohnson(all_numeric_predictors()) %>% 
+  step_normalize(all_numeric_predictors())
+```
+
+::: callout-tip
+## Dica:
+
+Com esses comandos podemos avaliar os procedimentos da receita na base de dados:
+`receita %>% prep() %>% juice()` 
+:::
+
+O banco de dados foi repartido em 90% para a base de treinamento e 10% para a base de teste, além disso, foi aplicado os seguintes passos na receita:
+
+- `step_dummy()`: Para transformar a variável categórica em uma variável dummy;
+- `step_YeoJohnson()`: Uma transformação similar a box-cox, entretanto mais generalizada;
+- `step_normalize()`: Para normalizar as observações.
+
+::: callout-warning
+## Importante
+
+Na receita é necessário se atentar a ordem em que os passos são adicionados. Note que o dataset além de possuir valores faltantes, também conta com uma variável categórioca e para realizarmos as transformações é necessário que nosso dataset seja todo numérico. 
+:::
+
+### Configurando os modelos:
+
+```{r}
+elastic <- 
+  linear_reg(penalty = tune(),
+             mixture = tune()
+  ) %>% 
+  set_mode("regression") %>% 
+  set_engine("glmnet")
+
+knn <-
+  nearest_neighbor(
+    neighbors = tune()
+  ) %>% 
+  set_mode("regression") %>% 
+  set_engine("kknn")
+
+svm <-
+  svm_rbf(
+    cost = tune(),
+    rbf_sigma = tune(),
+    margin = tune()
+  ) %>%
+  set_mode("regression") %>%
+  set_engine("kernlab")
+
+all_wf <- 
+   workflow_set(
+     preproc = list(receita),
+     models = list(
+       modelo_knn = knn,
+       modelo_svm = svm,
+       modelo_elastic = elastic
+     ),
+     cross = TRUE
+   ) %>%
+  mutate(wflow_id = gsub("(recipe_)", "", wflow_id))
+
+grid_control <- control_grid(
+  save_pred = TRUE,
+  save_workflow = TRUE,
+  parallel_over = "resamples"
+)
+
+vfold <- 
+  treinamento %>% 
+  vfold_cv(v = 15, strata = charges)
+
+metrica <- metric_set(rmse)
+```
+
+::: callout-tip
+## Dica:
+
+Com a função `grid_max_entropy()` podemos criar um grid de hiperpametros mais diversificado e através do `option_add()` informamos ao workflow qual grid utilizar em cada um dos modelos.
+:::
+
+```{r}
+set.seed(2023)
+grid_knn <- grid_max_entropy(all_wf %>% extract_parameter_set_dials("modelo_knn"), size = 50L)
+grid_elastic <- grid_max_entropy(all_wf %>% extract_parameter_set_dials("modelo_elastic"), size = 100L)
+grid_svm <-  grid_max_entropy(all_wf %>% extract_parameter_set_dials("modelo_svm"), size = 30L)
+
+```
+
+
+```{r}
+all_wf <- 
+  all_wf %>% 
+  option_add(grid = grid_knn, id = 'modelo_knn') %>% 
+  option_add(grid = grid_elastic, id = 'modelo_elastic') %>%  
+  option_add(grid = grid_svm, id = 'modelo_svm')
+```
+
+### Treinamento e Seleção:
+
+```{r}
+tunagem <- 
+  all_wf %>% 
+  workflow_map(
+    verbose = TRUE,
+    seed = 2023,
+    resamples = vfold,
+    control = grid_control,
+    metrics = metrica
+  )
+```
+
+```{r}
+autoplot(
+  tunagem,
+  rank_metric = "rmse",
+  metric = "rmse",
+  select_best = TRUE
+) + 
+  labs(title = "Melhor resultado dos modelos")+ ylab("rmse")+ xlab("Ranking")
+```
+```{r}
+best = tunagem %>% 
+  extract_workflow_set_result("modelo_svm") %>% 
+  select_best(metric = "rmse")
+
+best %>%
+  knitr::kable(caption = "Hiperparametros")
+```
+
+```{r}
+wf_final <- 
+  tunagem %>% extract_workflow("modelo_svm") %>% 
+  finalize_workflow(best)
+
+teste <- 
+  wf_final %>%  
+  last_fit(split = splitted)
+
+knitr::kable(teste$.metrics, caption = "Resultados") 
+```
+
+```{r}
+modelo_final <- 
+  wf_final |> 
+  fit(data2)
+
+```
+
+
+## Salvando o modelo
+
+```{r}
+# Salvando o modelo em um arquivo serializado
+#saveRDS(modelo_final, file = "modelo_final.rds")
+
+# Lendo o arquivo serializado com o modelo final
+#load(file = "modelo_final.rds")
+
+# Fazendo novas previsões
+dt <- data.frame("y" = data2$charges, "yhat" = predict(modelo_final, data2))
+g1 <- ggplot(dt,
+             aes(x = y, y = .pred)) +
+  geom_point() + geom_line(aes(y = y), colour = "red", size = 1) +
+  labs(title = "Modelo SVM", subtitle = "y_ajustado vs y_real")
+
+g1
+```
+
+
+## Exercício 3
+
+Considere o problema em que o objetivo é prever a qualidade, `quality`, com base em algumas variáveis. Sua análise deve conter uma análise exploratória dos dados, utilizar um esquema de `k-folds` cross-validation, com `k=20` e considerar um esquema de data splitting na proporção 90% para treino e 10% para teste.
+
+### Carregando o banco de dados
+
+```{r}
+url = "https://raw.githubusercontent.com/eraldof/machine_learning/main/winequality-red.csv"
+data3 <- read.csv(url)
+```
+
+### Analise exploratória:
+
+```{r}
+skimr::skim(data3)
+visdat::vis_dat(data3)
+visdat::vis_cor(data3)
+```
+
+O dataset possui 10 mil observações com 12 variáveis, sendo 11 do tipo contínua e 1 do tipo inteiro. Estamos interessados em prever a variável qualidade, que é a nota do vinho. Além disso, visualizando a primeira figura é possível notar que o dataset não possui informações faltantes. Já na figura 2, vemos que as variáveis não possuem uma correlação forte entre si.
+
+### Tratamento dos dados e preparação da receita:
+
+```{r}
+set.seed(2023)
+splitted <- initial_split(data3, prop = 0.9, strata = quality)
+treinamento <- training(splitted)
+teste <- testing(splitted)
+```
+
+```{r}
+receita <- recipe(formula = `quality` ~ . , data3) %>% 
+  step_YeoJohnson(all_numeric_predictors()) %>% 
+  step_normalize(all_numeric_predictors())
+```
+
+::: callout-tip
+## Dica:
+
+Com esses comandos podemos avaliar os procedimentos da receita na base de dados:
+`receita %>% prep() %>% juice()` 
+:::
+
+O banco de dados foi repartido em 90% para a base de treinamento e 10% para a base de teste, além disso, foi aplicado os seguintes passos na receita:
+
+- `step_YeoJohnson()`: Uma transformação similar a box-cox, entretanto mais generalizada;
+- `step_normalize()`: Para normalizar as observações.
+
+::: callout-warning
+## Importante
+
+Na receita é necessário se atentar a ordem em que os passos são adicionados. Note que o dataset além de possuir valores faltantes, também conta com uma variável categórioca e para realizarmos as transformações é necessário que nosso dataset seja todo numérico. 
+:::
+
+### Configurando os modelos:
+
+```{r}
+elastic <- 
+  linear_reg(penalty = tune(),
+             mixture = tune()
+  ) %>% 
+  set_mode("regression") %>% 
+  set_engine("glmnet")
+
+knn <-
+  nearest_neighbor(
+    neighbors = tune()
+  ) %>% 
+  set_mode("regression") %>% 
+  set_engine("kknn")
+
+svm <-
+  svm_rbf(
+    cost = tune(),
+    rbf_sigma = tune(),
+    margin = tune()
+  ) %>%
+  set_mode("regression") %>%
+  set_engine("kernlab")
+
+all_wf <- 
+   workflow_set(
+     preproc = list(receita),
+     models = list(
+       modelo_knn = knn,
+       modelo_svm = svm,
+       modelo_elastic = elastic
+     ),
+     cross = TRUE
+   ) %>%
+  mutate(wflow_id = gsub("(recipe_)", "", wflow_id))
+
+grid_control <- control_grid(
+  save_pred = TRUE,
+  save_workflow = TRUE,
+  parallel_over = "resamples"
+)
+
+vfold <- 
+  treinamento %>% 
+  vfold_cv(v = 15, strata = quality)
+
+metrica <- metric_set(rmse)
+```
+
+::: callout-tip
+## Dica:
+
+Com a função `grid_max_entropy()` podemos criar um grid de hiperpametros mais diversificado e através do `option_add()` informamos ao workflow qual grid utilizar em cada um dos modelos.
+:::
+
+```{r}
+set.seed(2023)
+grid_knn <- grid_max_entropy(all_wf %>% extract_parameter_set_dials("modelo_knn"), size = 50L)
+grid_elastic <- grid_max_entropy(all_wf %>% extract_parameter_set_dials("modelo_elastic"), size = 100L)
+grid_svm <-  grid_max_entropy(all_wf %>% extract_parameter_set_dials("modelo_svm"), size = 30L)
+
+```
+
+
+```{r}
+all_wf <- 
+  all_wf %>% 
+  option_add(grid = grid_knn, id = 'modelo_knn') %>% 
+  option_add(grid = grid_elastic, id = 'modelo_elastic') %>%  
+  option_add(grid = grid_svm, id = 'modelo_svm')
+```
+
+### Treinamento e Seleção:
+
+```{r}
+tunagem <- 
+  all_wf %>% 
+  workflow_map(
+    verbose = TRUE,
+    seed = 2023,
+    resamples = vfold,
+    control = grid_control,
+    metrics = metrica
+  )
+```
+
+```{r}
+autoplot(
+  tunagem,
+  rank_metric = "rmse",
+  metric = "rmse",
+  select_best = TRUE
+) + 
+  labs(title = "Melhor resultado dos modelos")+ ylab("rmse")+ xlab("Ranking")
+```
+
+```{r}
+best = tunagem %>% 
+  extract_workflow_set_result("modelo_knn") %>% 
+  select_best(metric = "rmse")
+
+best %>%
+  knitr::kable(caption = "Hiperparametros")
+```
+
+```{r}
+wf_final <- 
+  tunagem %>% extract_workflow("modelo_knn") %>% 
+  finalize_workflow(best)
+
+teste <- 
+  wf_final %>%  
+  last_fit(split = splitted)
+
+knitr::kable(teste$.metrics, caption = "Resultados") 
+```
+
+```{r}
+modelo_final <- 
+  wf_final |> 
+  fit(data3)
+```
+
+
+## Salvando o modelo
+
+```{r}
+# Salvando o modelo em um arquivo serializado
+#saveRDS(modelo_final, file = "modelo_final.rds")
+
+# Lendo o arquivo serializado com o modelo final
+#load(file = "modelo_final.rds")
+
+# Fazendo novas previsões
+#predict(modelo_final, data3)
+```
+
+## Exercício 4
+
+Considere o problema em que o objetivo é prever a variável `cooling_load` com base em algumas variáveis. Sua análise deve conter uma análise exploratória dos dados, utilizar um esquema de `k-folds` cross-validation, com `k=20` e considerar um esquema de data splitting na proporção 90% para treino e 10% para teste.
+
+### Carregando o banco de dados
+
+```{r}
+url = "https://raw.githubusercontent.com/eraldof/machine_learning/main/energy_efficiency_data.csv"
+data4 <- read.csv(url)
+```
+
+### Analise exploratória:
+
+```{r}
+skimr::skim(data4)
+visdat::vis_dat(data4)
+visdat::vis_cor(data4)
+```
+
+O dataset possui 768 observações e 10 variáveis sendo elas 8 features e 2 labels, todas do tipo númerico. Estamos interessados em prever a variável `cooling_load`. Visualizando a primeira figura é possível notar que nosso banco não possui informações faltantes. Entretanto podemos notar uma alta correlação entre algumas de suas variáveis.
+
+### Tratamento dos dados e preparação da receita:
+
+```{r}
+set.seed(2023)
+splitted <- initial_split(data4, prop = 0.9, strata = Cooling_Load)
+treinamento <- training(splitted)
+teste <- testing(splitted)
+```
+
+```{r}
+receita <- recipe(formula = `Cooling_Load` ~ . , data4) %>% 
+  step_corr(all_predictors()) %>% 
+  step_YeoJohnson(all_predictors()) %>% 
+  step_normalize(all_predictors())
+
+```
+
+::: callout-tip
+## Dica:
+
+Com esses comandos podemos avaliar os procedimentos da receita na base de dados:
+`receita %>% prep() %>% juice()` 
+:::
+
+O banco de dados foi repartido em 90% para a base de treinamento e 10% para a base de teste, além disso, foi aplicado os seguintes passos na receita:
+
+- `step_corr()`: Remove as variáveis com alta correlação;
+- `step_YeoJohnson()`: Uma transformação similar a box-cox, entretanto mais generalizada;
+- `step_normalize()`: Para normalizar as observações.
+
+::: callout-warning
+## Importante
+
+Na receita é necessário se atentar a ordem em que os passos são adicionados. Note que o dataset além de possuir valores faltantes, também conta com uma variável categórioca e para realizarmos as transformações é necessário que nosso dataset seja todo numérico. 
+:::
+
+### Configurando os modelos:
+
+```{r}
+elastic <- 
+  linear_reg(penalty = tune(),
+             mixture = tune()
+  ) %>% 
+  set_mode("regression") %>% 
+  set_engine("glmnet")
+
+knn <-
+  nearest_neighbor(
+    neighbors = tune()
+  ) %>% 
+  set_mode("regression") %>% 
+  set_engine("kknn")
+
+svm <-
+  svm_rbf(
+    cost = tune(),
+    rbf_sigma = tune(),
+    margin = tune()
+  ) %>%
+  set_mode("regression") %>%
+  set_engine("kernlab")
+
+all_wf <- 
+   workflow_set(
+     preproc = list(receita),
+     models = list(
+       modelo_knn = knn,
+       modelo_svm = svm,
+       modelo_elastic = elastic
+     ),
+     cross = TRUE
+   ) %>%
+  mutate(wflow_id = gsub("(recipe_)", "", wflow_id))
+
+grid_control <- control_grid(
+  save_pred = TRUE,
+  save_workflow = TRUE,
+  parallel_over = "resamples"
+)
+
+vfold <- 
+  treinamento %>% 
+  vfold_cv(v = 15L, strata = Cooling_Load)
+
+metrica <- metric_set(rmse)
+```
+
+::: callout-tip
+## Dica:
+
+Com a função `grid_max_entropy()` podemos criar um grid de hiperpametros mais diversificado e através do `option_add()` informamos ao workflow qual grid utilizar em cada um dos modelos.
+:::
+
+```{r}
+set.seed(2023)
+grid_knn <- grid_max_entropy(all_wf %>% extract_parameter_set_dials("modelo_knn"), size = 50L)
+grid_elastic <- grid_max_entropy(all_wf %>% extract_parameter_set_dials("modelo_elastic"), size = 100L)
+grid_svm <-  grid_max_entropy(all_wf %>% extract_parameter_set_dials("modelo_svm"), size = 30L)
+
+```
+
+
+```{r}
+all_wf <- 
+  all_wf %>% 
+  option_add(grid = grid_knn, id = 'modelo_knn') %>% 
+  option_add(grid = grid_elastic, id = 'modelo_elastic') %>%  
+  option_add(grid = grid_svm, id = 'modelo_svm')
+```
+
+### Treinamento e Seleção:
+
+```{r}
+tunagem <- 
+  all_wf %>% 
+  workflow_map(
+    verbose = TRUE,
+    seed = 2023,
+    resamples = vfold,
+    control = grid_control,
+    metrics = metrica
+  )
+```
+
+```{r}
+autoplot(
+  tunagem,
+  rank_metric = "rmse",
+  metric = "rmse",
+  select_best = TRUE
+) + 
+  labs(title = "Melhor resultado dos modelos")+ ylab("rmse")+ xlab("Ranking")
+```
+```{r}
+best = tunagem %>% 
+  extract_workflow_set_result("modelo_svm") %>% 
+  select_best(metric = "rmse")
+
+best %>%
+  knitr::kable(caption = "Hiperparametros")
+```
+
+```{r}
+wf_final <- 
+  tunagem %>% extract_workflow("modelo_svm") %>% 
+  finalize_workflow(best)
+
+teste <- 
+  wf_final %>%  
+  last_fit(split = splitted)
+
+knitr::kable(teste$.metrics, caption = "Resultados") 
+```
+
+```{r}
+modelo_final <- 
+  wf_final %>%  
+  fit(data4)
+```
+
+
+## Salvando o modelo
+
+```{r}
+# Salvando o modelo em um arquivo serializado
+#saveRDS(modelo_final, file = "modelo_final.rds")
+
+# Lendo o arquivo serializado com o modelo final
+#load(file = "modelo_final.rds")
+
+# Fazendo novas previsões
+dt <- data.frame("y" = data4$Cooling_Load, "yhat" = predict(modelo_final, data4))
+g1 <- ggplot(dt,
+             aes(x = y, y = .pred)) +
+  geom_point() + geom_line(aes(y = y), colour = "red", size = 1) +
+  labs(title = "Modelo SVM", subtitle = "y_ajustado vs y_real")
+
+g1
+```
