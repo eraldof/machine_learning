@@ -1,0 +1,159 @@
+---
+title: "Prova 3 - Machine Learning"
+author: "Eraldo Rocha"
+date: last-modified
+date-format: "DD MMM, YYYY"
+
+format: 
+  html:
+    theme: lux
+    code-fold: true
+    code-tools: true
+    code-block-bg: true
+    code-block-border-left: "#9400D3"
+    highlight-style: github
+    code-link: true
+    toc: true 
+    toc-title: Sumário
+    toc-location: left
+    toc-depth: 3
+    number-depth: 4
+    smooth-scroll: true
+    
+self-contained: true
+page-layout: full
+editor: source
+---
+
+```{r, warning=FALSE}
+library(tidymodels)
+tidymodels_prefer()
+```
+
+
+# Questão 1
+
+São 2 banco de dados que contem informações sociodemográficas e socioeconômicas de clientes de um banco.
+A ideia é construir um modelo que classifique futuros clientes em "bons" e "ruins" pagadores
+
+
+### 
+
+```{r}
+rm(list = ls())
+url = 'https://raw.githubusercontent.com/eraldof/machine_learning/main/Projeto_Terceira%20Prova/application_record.csv'
+dados1 <- read.csv(url)
+url = 'https://raw.githubusercontent.com/eraldof/machine_learning/main/Projeto_Terceira%20Prova/credit_record.csv'
+dados2 <- read.csv(url)
+
+dados2 <- dados2[,-2]
+```
+A variável STATUS apresenta-se da seguinte forma:
+
+- 0: 1 a 29 dias de atraso; 
+- 1: 30 a 59 dias de atraso; 
+- 2: 60 a 89 dias de atraso;
+- 3: 90 a 119 dias de atraso; 
+- 4: 120 a 149 dias de atraso; 
+- 5: Dívidas vencidas ou incobráveis, baixas por mais de 150 dias; 
+- C: quitado naquele mês;
+- X: Nenhum empréstimo no mês.
+
+Serão feitas as seguintes transformações: 
+
+Será atribuido 1 para clientes que pagaram suas dívidas com no máximo 30 dias de atraso e clientes que quitaram suas dívidas. Para as demais respostas atribuiremos 0. Além disso, também atribuiremos 0 para clientes que não pediram nenhum emprestimo com a finalidade de diminuir o risco de ceder crédito sem informações prévias.  
+
+
+A variável `DAYS_BIRTH` foi transformada na variável `AGE`.
+A variável `DAYS_EMPLOYED` foi transformada em `MONTH_EMPLOYED`.
+
+```{r, warning= F}
+customers <- dados1 %>% inner_join(dados2)
+customers$STATUS <- ifelse(customers$STATUS == '0' | 
+                           customers$STATUS == 'C', 'Y', 'N')
+
+customers$AGE <- customers$DAYS_BIRTH / 365 * -1
+customers$MONTH_EMPLOYED <- (customers$DAYS_EMPLOYED / 30) * -1
+customers$CNT_CHILDREN <- ifelse(customers$CNT_CHILDREN < 2, 'poucos',
+                                 ifelse(customers$CNT_CHILDREN == 2 | customers$CNT_CHILDREN == 3, 'razoavel', 'muitos')
+)
+
+customers$OCCUPATION_TYPE <- ifelse(customers$OCCUPATION_TYPE == '', 'NOTHING', customers$OCCUPATION_TYPE)
+
+customers <- customers %>% select(-c('ID', 'DAYS_BIRTH', 'DAYS_EMPLOYED'))
+
+skimr::skim(customers)
+```
+
+```{r}
+splitted <- initial_split(customers, prop = 0.9, strata = `STATUS`)
+treinamento <- training(splitted)
+
+
+receita <- recipe(formula = `STATUS` ~ . , customers) %>%
+  step_novel(all_nominal(),-all_outcomes()) %>%
+  step_dummy(all_nominal(),-all_outcomes()) %>% 
+  step_zv(all_numeric(), -all_outcomes())  %>% 
+  step_normalize(all_numeric_predictors())
+
+```
+
+```{r}
+#Preparando o Modelo
+reg_log <- logistic_reg(penalty = tune(), mixture = tune()) %>% 
+  set_engine(engine = 'glmnet', standardize = FALSE) %>% 
+  set_mode('classification')
+
+#workflow
+all_wf <- 
+  workflow_set(
+    preproc = list(receita),
+    models = list(modelo_reglog = reg_log), 
+    cross = TRUE
+  )
+
+#cross-validation
+set.seed(2023)
+cv <- vfold_cv(treinamento, v = 2L, strata = `STATUS`)
+
+#metrics
+metrica <- metric_set(accuracy, roc_auc)
+
+grid_control = control_grid(
+  save_pred = TRUE,
+  parallel_over = "resamples",
+  save_workflow = TRUE
+)
+```
+
+```{r}
+#tunning
+tunagem <- 
+  all_wf %>%  
+  workflow_map(
+    seed = 2023L, 
+    verbose = TRUE,
+    resamples = cv,
+    grid = 20L,
+    control = grid_control
+  )
+```
+
+
+```{r}
+autoplot(
+  tunagem,
+  metric = "roc_auc",
+) + 
+  labs(title = "Resultados do modelo")+ ylab("roc_auc")+ xlab("Ranking")
+```
+
+```{r}
+best = tunagem %>% 
+  extract_workflow_set_result("reg_log") %>% 
+  select_best(metric = "roc_auc")
+
+best %>%
+  knitr::kable(caption = "Hiperparametros")
+```
+
