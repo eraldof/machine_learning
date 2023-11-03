@@ -26,6 +26,7 @@ editor: source
 ---
 
 ```{r, warning=FALSE}
+rm(list = ls())
 library(tidymodels)
 tidymodels_prefer()
 ```
@@ -33,127 +34,126 @@ tidymodels_prefer()
 
 # Questão 1
 
-São 2 banco de dados que contem informações sociodemográficas e socioeconômicas de clientes de um banco.
-A ideia é construir um modelo que classifique futuros clientes em "bons" e "ruins" pagadores
-
-
-### 
+Abaixo podemos visualizar um resumo das informações presente em nosso banco de dados, que consiste em 12 caracteristicas clínicas de 918 indivíduos diferentes. Das 12 características clínicas, 7 são variáveis categóricas e 5 variáveis numéricas. Além disso, na coluna n_missing, constata-se a completude do nosso banco de dados.
 
 ```{r}
-rm(list = ls())
-url = 'https://raw.githubusercontent.com/eraldof/machine_learning/main/Projeto_Terceira%20Prova/application_record.csv'
-dados1 <- read.csv(url)
-url = 'https://raw.githubusercontent.com/eraldof/machine_learning/main/Projeto_Terceira%20Prova/credit_record.csv'
-dados2 <- read.csv(url)
+url = 'https://raw.githubusercontent.com/eraldof/machine_learning/main/Projeto_Terceira%20Prova/heart.csv'
+data <- read.csv(url)
 
-dados2 <- dados2[,-2]
+
+data$Sex <- factor(data$Sex, levels = c("M","F"), labels = c("Masculino", "Feminino"))
+data$ChestPainType <- factor(data$ChestPainType, levels = c("TA", "ATA", "NAP", "ASY"), labels = c("Angina Típica", "Angina Atípica", "Dor Não Anginosa", "Assintomática"))
+data$FastingBS <- factor(data$FastingBS, levels = c(0,1),labels = c("C.C", "JejumBS > 120 mg/dl"))
+data$RestingECG <- factor(data$RestingECG, levels = c("Normal", "ST", "LVH"), labels = c("Normal", "anormalidade da onda", "hipertrofia ventricular"))
+data$ExerciseAngina <- factor(data$ExerciseAngina, levels = c("N", "Y"), labels = c("Não", "Sim"))
+data$ST_Slope <- factor(data$ST_Slope, levels = c("Up", "Flat", "Down"), labels = c("Ascendente", "Plano", "Descendente"))
+data$HeartDisease <- factor(data$HeartDisease, levels = c(0,1),labels = c("Normal", "Doença cardiaca"))
+data$Oldpeak <- as.numeric(data$Oldpeak)
+
+
+skimr::skim(data)
 ```
-A variável STATUS apresenta-se da seguinte forma:
 
-- 0: 1 a 29 dias de atraso; 
-- 1: 30 a 59 dias de atraso; 
-- 2: 60 a 89 dias de atraso;
-- 3: 90 a 119 dias de atraso; 
-- 4: 120 a 149 dias de atraso; 
-- 5: Dívidas vencidas ou incobráveis, baixas por mais de 150 dias; 
-- C: quitado naquele mês;
-- X: Nenhum empréstimo no mês.
-
-Serão feitas as seguintes transformações: 
-
-Será atribuido 1 para clientes que pagaram suas dívidas com no máximo 30 dias de atraso e clientes que quitaram suas dívidas. Para as demais respostas atribuiremos 0. Além disso, também atribuiremos 0 para clientes que não pediram nenhum emprestimo com a finalidade de diminuir o risco de ceder crédito sem informações prévias.  
+## Repartindo o banco de dados e criando a receita
+```{r}
+set.seed(2023)
+splitted <- initial_split(data, prop = 0.80, strata = `HeartDisease`)
+treinamento <- training(splitted)
+teste <- testing(splitted)
+```
 
 
-A variável `DAYS_BIRTH` foi transformada na variável `AGE`.
-A variável `DAYS_EMPLOYED` foi transformada em `MONTH_EMPLOYED`.
+```{r}
+receita <- recipe(HeartDisease ~ ., data = treinamento) %>%
+  recipes::step_dummy(all_nominal(), -all_outcomes()) %>% 
+  recipes::step_zv(all_numeric(), -all_outcomes()) %>% 
+  recipes::step_corr(all_predictors(), threshold = 0.7, method = "spearman")
+```
 
-```{r, warning= F}
-customers <- dados1 %>% inner_join(dados2)
-customers$STATUS <- ifelse(customers$STATUS == '0' | 
-                           customers$STATUS == 'C', 'Y', 'N')
+## Treinando
 
-customers$AGE <- customers$DAYS_BIRTH / 365 * -1
-customers$MONTH_EMPLOYED <- (customers$DAYS_EMPLOYED / 30) * -1
-customers$CNT_CHILDREN <- ifelse(customers$CNT_CHILDREN < 2, 'poucos',
-                                 ifelse(customers$CNT_CHILDREN == 2 | customers$CNT_CHILDREN == 3, 'razoavel', 'muitos')
+```{r}
+
+```
+
+```{r}
+log_reg <-
+  logistic_reg(penalty = tune(), mixture = tune()) %>% # logistic regression
+  set_engine(engine = "glmnet") %>%
+  set_mode("classification")
+
+wf <- workflow_set(
+  preproc = list(receita),
+  models = list(modelo_log = log_reg)
+) %>%
+  mutate(wflow_id = gsub("(recipe_)", "", wflow_id))
+
+set.seed(2023)
+vfold <- vfold_cv(treinamento,
+                     v = 5,
+                     strata = HeartDisease) 
+
+grid_control <- control_grid(
+  save_pred = TRUE,
+  save_workflow = TRUE,
+  parallel_over = "resamples"
 )
 
-customers$OCCUPATION_TYPE <- ifelse(customers$OCCUPATION_TYPE == '', 'NOTHING', customers$OCCUPATION_TYPE)
-
-customers <- customers %>% select(-c('ID', 'DAYS_BIRTH', 'DAYS_EMPLOYED'))
-
-skimr::skim(customers)
-```
-
-```{r}
-splitted <- initial_split(customers, prop = 0.9, strata = `STATUS`)
-treinamento <- training(splitted)
-
-
-receita <- recipe(formula = `STATUS` ~ . , customers) %>%
-  step_novel(all_nominal(),-all_outcomes()) %>%
-  step_dummy(all_nominal(),-all_outcomes()) %>% 
-  step_zv(all_numeric(), -all_outcomes())  %>% 
-  step_normalize(all_numeric_predictors())
-
-```
-
-```{r}
-#Preparando o Modelo
-reg_log <- logistic_reg(penalty = tune(), mixture = tune()) %>% 
-  set_engine(engine = 'glmnet', standardize = FALSE) %>% 
-  set_mode('classification')
-
-#workflow
-all_wf <- 
-  workflow_set(
-    preproc = list(receita),
-    models = list(modelo_reglog = reg_log), 
-    cross = TRUE
-  )
-
-#cross-validation
-set.seed(2023)
-cv <- vfold_cv(treinamento, v = 2L, strata = `STATUS`)
-
-#metrics
 metrica <- metric_set(accuracy, roc_auc)
 
-grid_control = control_grid(
-  save_pred = TRUE,
-  parallel_over = "resamples",
-  save_workflow = TRUE
-)
+
 ```
 
 ```{r}
-#tunning
 tunagem <- 
-  all_wf %>%  
+  wf %>% 
   workflow_map(
-    seed = 2023L, 
     verbose = TRUE,
-    resamples = cv,
-    grid = 20L,
-    control = grid_control
+    seed = 2023,
+    resamples = vfold,
+    control = grid_control,
+    metrics = metrica,
+    grid = 50L
   )
 ```
 
-
-```{r}
-autoplot(
-  tunagem,
-  metric = "roc_auc",
-) + 
-  labs(title = "Resultados do modelo")+ ylab("roc_auc")+ xlab("Ranking")
-```
-
+## Verificando os melhores hiperparametros
 ```{r}
 best = tunagem %>% 
-  extract_workflow_set_result("reg_log") %>% 
+  extract_workflow_set_result("modelo_log") %>% 
   select_best(metric = "roc_auc")
 
 best %>%
-  knitr::kable(caption = "Hiperparametros")
+  knitr::kable()
+
+test <-  tunagem %>% 
+   extract_workflow("modelo_log") %>% 
+   finalize_workflow(best) %>% 
+   last_fit(split = splitted,
+            metrics = metric_set(accuracy, roc_auc))
 ```
+
+## Finalizando o modelo e testando em uma matriz de confusão
+```{r}
+predictions <- test %>%
+  collect_predictions()
+
+matriz_confusão <- predictions %>% 
+  conf_mat(HeartDisease, .pred_class)
+
+round(prop.table(matriz_confusão$table),2) %>%
+  knitr::kable()
+```
+
+
+## Verificando a curva roc
+```{r}
+curva_roc <- roc_curve(predictions, HeartDisease, .pred_Normal)
+roc_auc(predictions, HeartDisease, .pred_Normal)
+autoplot(curva_roc)
+```
+
+O modelo em questão tem um desempenho melhor do que um classificador aleatório.
+
+
 

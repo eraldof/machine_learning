@@ -3019,7 +3019,11 @@ vertical-align: -.125em;
 <li>
 <a href="#quest%C3%A3o-1" id="toc-questão-1" class="nav-link active" data-scroll-target="#quest%C3%A3o-1">Questão 1</a>
   <ul class="collapse">
-<li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section"></a></li>
+<li><a href="#repartindo-o-banco-de-dados-e-criando-a-receita" id="toc-repartindo-o-banco-de-dados-e-criando-a-receita" class="nav-link" data-scroll-target="#repartindo-o-banco-de-dados-e-criando-a-receita">Repartindo o banco de dados e criando a receita</a></li>
+  <li><a href="#treinando" id="toc-treinando" class="nav-link" data-scroll-target="#treinando">Treinando</a></li>
+  <li><a href="#verificando-os-melhores-hiperparametros" id="toc-verificando-os-melhores-hiperparametros" class="nav-link" data-scroll-target="#verificando-os-melhores-hiperparametros">Verificando os melhores hiperparametros</a></li>
+  <li><a href="#finalizando-o-modelo-e-testando-em-uma-matriz-de-confus%C3%A3o" id="toc-finalizando-o-modelo-e-testando-em-uma-matriz-de-confusão" class="nav-link" data-scroll-target="#finalizando-o-modelo-e-testando-em-uma-matriz-de-confus%C3%A3o">Finalizando o modelo e testando em uma matriz de confusão</a></li>
+  <li><a href="#verificando-a-curva-roc" id="toc-verificando-a-curva-roc" class="nav-link" data-scroll-target="#verificando-a-curva-roc">Verificando a curva roc</a></li>
   </ul>
 </li>
   </ul></nav>
@@ -3044,7 +3048,7 @@ vertical-align: -.125em;
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">21 Oct, 2023</p>
+      <p class="date">02 Nov, 2023</p>
     </div>
   </div>
   
@@ -3053,7 +3057,8 @@ vertical-align: -.125em;
   
 
 </header><div class="cell">
-<details><summary>Code</summary><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://tidymodels.tidymodels.org">tidymodels</a></span><span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<details><summary>Code</summary><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/rm.html">rm</a></span><span class="op">(</span>list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ls.html">ls</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://tidymodels.tidymodels.org">tidymodels</a></span><span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details><div class="cell-output cell-output-stderr">
 <pre><code>── Attaching packages ────────────────────────────────────── tidymodels 1.0.0 ──</code></pre>
 </div>
@@ -3079,67 +3084,38 @@ vertical-align: -.125em;
 </details>
 </div>
 <section id="questão-1" class="level1"><h1>Questão 1</h1>
-<p>São 2 banco de dados que contem informações sociodemográficas e socioeconômicas de clientes de um banco. A ideia é construir um modelo que classifique futuros clientes em “bons” e “ruins” pagadores</p>
-<section id="section" class="level3"><h3 class="anchored" data-anchor-id="section"></h3>
+<p>Abaixo podemos visualizar um resumo das informações presente em nosso banco de dados, que consiste em 12 caracteristicas clínicas de 918 indivíduos diferentes. Das 12 características clínicas, 7 são variáveis categóricas e 5 variáveis numéricas. Além disso, na coluna n_missing, constata-se a completude do nosso banco de dados.</p>
 <div class="cell">
-<details><summary>Code</summary><div class="sourceCode" id="cb6"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/rm.html">rm</a></span><span class="op">(</span>list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ls.html">ls</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">url</span> <span class="op">=</span> <span class="st">&#39;https://raw.githubusercontent.com/eraldof/machine_learning/main/Projeto_Terceira%20Prova/application_record.csv&#39;</span></span>
-<span><span class="va">dados1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html">read.csv</a></span><span class="op">(</span><span class="va">url</span><span class="op">)</span></span>
-<span><span class="va">url</span> <span class="op">=</span> <span class="st">&#39;https://raw.githubusercontent.com/eraldof/machine_learning/main/Projeto_Terceira%20Prova/credit_record.csv&#39;</span></span>
-<span><span class="va">dados2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html">read.csv</a></span><span class="op">(</span><span class="va">url</span><span class="op">)</span></span>
+<details><summary>Code</summary><div class="sourceCode" id="cb6"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">url</span> <span class="op">=</span> <span class="st">&#39;https://raw.githubusercontent.com/eraldof/machine_learning/main/Projeto_Terceira%20Prova/heart.csv&#39;</span></span>
+<span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html">read.csv</a></span><span class="op">(</span><span class="va">url</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">dados2</span> <span class="op">&lt;-</span> <span class="va">dados2</span><span class="op">[</span>,<span class="op">-</span><span class="fl">2</span><span class="op">]</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
-<p>A variável STATUS apresenta-se da seguinte forma:</p>
-<ul>
-<li>0: 1 a 29 dias de atraso;</li>
-<li>1: 30 a 59 dias de atraso;</li>
-<li>2: 60 a 89 dias de atraso;</li>
-<li>3: 90 a 119 dias de atraso;</li>
-<li>4: 120 a 149 dias de atraso;</li>
-<li>5: Dívidas vencidas ou incobráveis, baixas por mais de 150 dias;</li>
-<li>C: quitado naquele mês;</li>
-<li>X: Nenhum empréstimo no mês.</li>
-</ul>
-<p>Serão feitas as seguintes transformações:</p>
-<p>Será atribuido 1 para clientes que pagaram suas dívidas com no máximo 30 dias de atraso e clientes que quitaram suas dívidas. Para as demais respostas atribuiremos 0. Além disso, também atribuiremos 0 para clientes que não pediram nenhum emprestimo com a finalidade de diminuir o risco de ceder crédito sem informações prévias.</p>
-<p>A variável <code>DAYS_BIRTH</code> foi transformada na variável <code>AGE</code>. A variável <code>DAYS_EMPLOYED</code> foi transformada em <code>MONTH_EMPLOYED</code>.</p>
-<div class="cell">
-<details><summary>Code</summary><div class="sourceCode" id="cb7"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">customers</span> <span class="op">&lt;-</span> <span class="va">dados1</span> <span class="op">%&gt;%</span> <span class="fu">inner_join</span><span class="op">(</span><span class="va">dados2</span><span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details><div class="cell-output cell-output-stderr">
-<pre><code>Joining with `by = join_by(ID)`</code></pre>
-</div>
-<details><summary>Code</summary><div class="sourceCode" id="cb9"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">customers</span><span class="op">$</span><span class="va">STATUS</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html">ifelse</a></span><span class="op">(</span><span class="va">customers</span><span class="op">$</span><span class="va">STATUS</span> <span class="op">==</span> <span class="st">&#39;0&#39;</span> <span class="op">|</span> </span>
-<span>                           <span class="va">customers</span><span class="op">$</span><span class="va">STATUS</span> <span class="op">==</span> <span class="st">&#39;C&#39;</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">customers</span><span class="op">$</span><span class="va">AGE</span> <span class="op">&lt;-</span> <span class="va">customers</span><span class="op">$</span><span class="va">DAYS_BIRTH</span> <span class="op">/</span> <span class="fl">365</span> <span class="op">*</span> <span class="op">-</span><span class="fl">1</span></span>
-<span><span class="va">customers</span><span class="op">$</span><span class="va">MONTH_EMPLOYED</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="va">customers</span><span class="op">$</span><span class="va">DAYS_EMPLOYED</span> <span class="op">/</span> <span class="fl">30</span><span class="op">)</span> <span class="op">*</span> <span class="op">-</span><span class="fl">1</span></span>
+<span><span class="va">data</span><span class="op">$</span><span class="va">Sex</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html">factor</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">Sex</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;M&quot;</span>,<span class="st">&quot;F&quot;</span><span class="op">)</span>, labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;Masculino&quot;</span>, <span class="st">&quot;Feminino&quot;</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">data</span><span class="op">$</span><span class="va">ChestPainType</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html">factor</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">ChestPainType</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;TA&quot;</span>, <span class="st">&quot;ATA&quot;</span>, <span class="st">&quot;NAP&quot;</span>, <span class="st">&quot;ASY&quot;</span><span class="op">)</span>, labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;Angina Típica&quot;</span>, <span class="st">&quot;Angina Atípica&quot;</span>, <span class="st">&quot;Dor Não Anginosa&quot;</span>, <span class="st">&quot;Assintomática&quot;</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">data</span><span class="op">$</span><span class="va">FastingBS</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html">factor</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">FastingBS</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span>,labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;C.C&quot;</span>, <span class="st">&quot;JejumBS &gt; 120 mg/dl&quot;</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">data</span><span class="op">$</span><span class="va">RestingECG</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html">factor</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">RestingECG</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;Normal&quot;</span>, <span class="st">&quot;ST&quot;</span>, <span class="st">&quot;LVH&quot;</span><span class="op">)</span>, labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;Normal&quot;</span>, <span class="st">&quot;anormalidade da onda&quot;</span>, <span class="st">&quot;hipertrofia ventricular&quot;</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">data</span><span class="op">$</span><span class="va">ExerciseAngina</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html">factor</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">ExerciseAngina</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;N&quot;</span>, <span class="st">&quot;Y&quot;</span><span class="op">)</span>, labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;Não&quot;</span>, <span class="st">&quot;Sim&quot;</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">data</span><span class="op">$</span><span class="va">ST_Slope</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html">factor</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">ST_Slope</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;Up&quot;</span>, <span class="st">&quot;Flat&quot;</span>, <span class="st">&quot;Down&quot;</span><span class="op">)</span>, labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;Ascendente&quot;</span>, <span class="st">&quot;Plano&quot;</span>, <span class="st">&quot;Descendente&quot;</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">data</span><span class="op">$</span><span class="va">HeartDisease</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html">factor</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">HeartDisease</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span>,labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;Normal&quot;</span>, <span class="st">&quot;Doença cardiaca&quot;</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">data</span><span class="op">$</span><span class="va">Oldpeak</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html">as.numeric</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">Oldpeak</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">customers</span> <span class="op">&lt;-</span> <span class="va">customers</span> <span class="op">%&gt;%</span> <span class="fu">select</span><span class="op">(</span><span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&#39;ID&#39;</span>, <span class="st">&#39;DAYS_BIRTH&#39;</span>, <span class="st">&#39;DAYS_EMPLOYED&#39;</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="kw">for</span><span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html">ncol</a></span><span class="op">(</span><span class="va">customers</span><span class="op">)</span><span class="op">)</span><span class="op">{</span></span>
-<span>  <span class="kw">if</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html">is.character</a></span><span class="op">(</span><span class="va">customers</span><span class="op">[</span>,<span class="va">i</span><span class="op">]</span><span class="op">)</span> <span class="op">==</span> <span class="cn">T</span><span class="op">)</span><span class="op">{</span></span>
-<span>    <span class="va">customers</span><span class="op">[</span>,<span class="va">i</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html">factor</a></span><span class="op">(</span><span class="va">customers</span><span class="op">[</span>,<span class="va">i</span><span class="op">]</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="fu">skimr</span><span class="fu">::</span><span class="fu"><a href="https://docs.ropensci.org/skimr/reference/skim.html">skim</a></span><span class="op">(</span><span class="va">customers</span><span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span><span class="fu">skimr</span><span class="fu">::</span><span class="fu"><a href="https://docs.ropensci.org/skimr/reference/skim.html">skim</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details><div class="cell-output-display">
 <table class="table table-sm table-striped small">
 <caption>Data summary</caption>
 <tbody>
 <tr class="odd">
 <td style="text-align: left;">Name</td>
-<td style="text-align: left;">customers</td>
+<td style="text-align: left;">data</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Number of rows</td>
-<td style="text-align: left;">777715</td>
+<td style="text-align: left;">918</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Number of columns</td>
-<td style="text-align: left;">18</td>
+<td style="text-align: left;">12</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">_______________________</td>
@@ -3151,11 +3127,11 @@ vertical-align: -.125em;
 </tr>
 <tr class="even">
 <td style="text-align: left;">factor</td>
-<td style="text-align: left;">8</td>
+<td style="text-align: left;">7</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">numeric</td>
-<td style="text-align: left;">10</td>
+<td style="text-align: left;">5</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">________________________</td>
@@ -3170,12 +3146,12 @@ vertical-align: -.125em;
 <p><strong>Variable type: factor</strong></p>
 <table class="table table-sm table-striped small">
 <colgroup>
-<col style="width: 18%">
-<col style="width: 9%">
-<col style="width: 12%">
-<col style="width: 7%">
+<col style="width: 15%">
+<col style="width: 10%">
+<col style="width: 14%">
 <col style="width: 8%">
-<col style="width: 45%">
+<col style="width: 9%">
+<col style="width: 40%">
 </colgroup>
 <thead><tr class="header">
 <th style="text-align: left;">skim_variable</th>
@@ -3187,85 +3163,77 @@ vertical-align: -.125em;
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left;">CODE_GENDER</td>
+<td style="text-align: left;">Sex</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: left;">FALSE</td>
 <td style="text-align: right;">2</td>
-<td style="text-align: left;">F: 518851, M: 258864</td>
+<td style="text-align: left;">Mas: 725, Fem: 193</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">FLAG_OWN_CAR</td>
+<td style="text-align: left;">ChestPainType</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">FALSE</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">Ass: 496, Dor: 203, Ang: 173, Ang: 46</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">FastingBS</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: left;">FALSE</td>
 <td style="text-align: right;">2</td>
-<td style="text-align: left;">N: 473355, Y: 304360</td>
+<td style="text-align: left;">C.C: 704, Jej: 214</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RestingECG</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">FALSE</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">Nor: 552, hip: 188, ano: 178</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">FLAG_OWN_REALTY</td>
+<td style="text-align: left;">ExerciseAngina</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: left;">FALSE</td>
 <td style="text-align: right;">2</td>
-<td style="text-align: left;">Y: 512948, N: 264767</td>
+<td style="text-align: left;">Não: 547, Sim: 371</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">NAME_INCOME_TYPE</td>
+<td style="text-align: left;">ST_Slope</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: left;">FALSE</td>
-<td style="text-align: right;">5</td>
-<td style="text-align: left;">Wor: 400164, Com: 183385, Pen: 128392, Sta: 65437</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">Pla: 460, Asc: 395, Des: 63</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">NAME_EDUCATION_TYPE</td>
+<td style="text-align: left;">HeartDisease</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
 <td style="text-align: left;">FALSE</td>
-<td style="text-align: right;">5</td>
-<td style="text-align: left;">Sec: 524261, Hig: 213633, Inc: 30329, Low: 8655</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">NAME_FAMILY_STATUS</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: left;">FALSE</td>
-<td style="text-align: right;">5</td>
-<td style="text-align: left;">Mar: 546619, Sin: 94335, Civ: 60342, Sep: 45255</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">NAME_HOUSING_TYPE</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: left;">FALSE</td>
-<td style="text-align: right;">6</td>
-<td style="text-align: left;">Hou: 697151, Wit: 35735, Mun: 24640, Ren: 10898</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">OCCUPATION_TYPE</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: left;">FALSE</td>
-<td style="text-align: right;">19</td>
-<td style="text-align: left;">emp: 240048, Lab: 131572, Cor: 77112, Sal: 70362</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: left;">Doe: 508, Nor: 410</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Variable type: numeric</strong></p>
 <table class="table table-sm table-striped small">
 <colgroup>
-<col style="width: 14%">
-<col style="width: 8%">
+<col style="width: 15%">
 <col style="width: 11%">
-<col style="width: 8%">
-<col style="width: 8%">
-<col style="width: 8%">
-<col style="width: 8%">
-<col style="width: 8%">
-<col style="width: 8%">
-<col style="width: 9%">
+<col style="width: 15%">
+<col style="width: 7%">
+<col style="width: 7%">
 <col style="width: 5%">
+<col style="width: 7%">
+<col style="width: 6%">
+<col style="width: 6%">
+<col style="width: 6%">
+<col style="width: 6%">
 </colgroup>
 <thead><tr class="header">
 <th style="text-align: left;">skim_variable</th>
@@ -3282,139 +3250,214 @@ vertical-align: -.125em;
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left;">CNT_CHILDREN</td>
+<td style="text-align: left;">Age</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
-<td style="text-align: right;">0.43</td>
-<td style="text-align: right;">0.75</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">19.00</td>
-<td style="text-align: left;">▇▁▁▁▁</td>
+<td style="text-align: right;">53.51</td>
+<td style="text-align: right;">9.43</td>
+<td style="text-align: right;">28.0</td>
+<td style="text-align: right;">47.00</td>
+<td style="text-align: right;">54.0</td>
+<td style="text-align: right;">60.0</td>
+<td style="text-align: right;">77.0</td>
+<td style="text-align: left;">▁▅▇▆▁</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">AMT_INCOME_TOTAL</td>
+<td style="text-align: left;">RestingBP</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
-<td style="text-align: right;">188534.80</td>
-<td style="text-align: right;">101622.45</td>
-<td style="text-align: right;">27000.00</td>
-<td style="text-align: right;">121500.00</td>
-<td style="text-align: right;">162000.00</td>
-<td style="text-align: right;">225000.00</td>
-<td style="text-align: right;">1575000.00</td>
-<td style="text-align: left;">▇▁▁▁▁</td>
+<td style="text-align: right;">132.40</td>
+<td style="text-align: right;">18.51</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">120.00</td>
+<td style="text-align: right;">130.0</td>
+<td style="text-align: right;">140.0</td>
+<td style="text-align: right;">200.0</td>
+<td style="text-align: left;">▁▁▃▇▁</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">FLAG_MOBIL</td>
+<td style="text-align: left;">Cholesterol</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: left;">▁▁▇▁▁</td>
+<td style="text-align: right;">198.80</td>
+<td style="text-align: right;">109.38</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">173.25</td>
+<td style="text-align: right;">223.0</td>
+<td style="text-align: right;">267.0</td>
+<td style="text-align: right;">603.0</td>
+<td style="text-align: left;">▃▇▇▁▁</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">FLAG_WORK_PHONE</td>
+<td style="text-align: left;">MaxHR</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
-<td style="text-align: right;">0.23</td>
-<td style="text-align: right;">0.42</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: left;">▇▁▁▁▂</td>
+<td style="text-align: right;">136.81</td>
+<td style="text-align: right;">25.46</td>
+<td style="text-align: right;">60.0</td>
+<td style="text-align: right;">120.00</td>
+<td style="text-align: right;">138.0</td>
+<td style="text-align: right;">156.0</td>
+<td style="text-align: right;">202.0</td>
+<td style="text-align: left;">▁▃▇▆▂</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">FLAG_PHONE</td>
+<td style="text-align: left;">Oldpeak</td>
 <td style="text-align: right;">0</td>
 <td style="text-align: right;">1</td>
-<td style="text-align: right;">0.30</td>
-<td style="text-align: right;">0.46</td>
+<td style="text-align: right;">0.89</td>
+<td style="text-align: right;">1.07</td>
+<td style="text-align: right;">-2.6</td>
 <td style="text-align: right;">0.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: left;">▇▁▁▁▃</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">FLAG_EMAIL</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">0.09</td>
-<td style="text-align: right;">0.29</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: left;">▇▁▁▁▁</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">CNT_FAM_MEMBERS</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">2.21</td>
-<td style="text-align: right;">0.91</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">2.00</td>
-<td style="text-align: right;">2.00</td>
-<td style="text-align: right;">3.00</td>
-<td style="text-align: right;">20.00</td>
-<td style="text-align: left;">▇▁▁▁▁</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">STATUS</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">0.80</td>
-<td style="text-align: right;">0.40</td>
-<td style="text-align: right;">0.00</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: right;">1.00</td>
-<td style="text-align: left;">▂▁▁▁▇</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">AGE</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">44.18</td>
-<td style="text-align: right;">11.24</td>
-<td style="text-align: right;">20.52</td>
-<td style="text-align: right;">34.84</td>
-<td style="text-align: right;">43.18</td>
-<td style="text-align: right;">53.30</td>
-<td style="text-align: right;">68.91</td>
-<td style="text-align: left;">▃▇▇▆▃</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">MONTH_EMPLOYED</td>
-<td style="text-align: right;">0</td>
-<td style="text-align: right;">1</td>
-<td style="text-align: right;">-1925.86</td>
-<td style="text-align: right;">4549.06</td>
-<td style="text-align: right;">-12174.77</td>
-<td style="text-align: right;">14.37</td>
-<td style="text-align: right;">56.07</td>
-<td style="text-align: right;">109.73</td>
-<td style="text-align: right;">523.77</td>
-<td style="text-align: left;">▂▁▁▁▇</td>
+<td style="text-align: right;">0.6</td>
+<td style="text-align: right;">1.5</td>
+<td style="text-align: right;">6.2</td>
+<td style="text-align: left;">▁▇▆▁▁</td>
 </tr>
 </tbody>
 </table>
 </div>
 </div>
+<section id="repartindo-o-banco-de-dados-e-criando-a-receita" class="level2"><h2 class="anchored" data-anchor-id="repartindo-o-banco-de-dados-e-criando-a-receita">Repartindo o banco de dados e criando a receita</h2>
+<div class="cell">
+<details><summary>Code</summary><div class="sourceCode" id="cb7"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html">set.seed</a></span><span class="op">(</span><span class="fl">2023</span><span class="op">)</span></span>
+<span><span class="va">splitted</span> <span class="op">&lt;-</span> <span class="fu">initial_split</span><span class="op">(</span><span class="va">data</span>, prop <span class="op">=</span> <span class="fl">0.80</span>, strata <span class="op">=</span> <span class="va">`HeartDisease`</span><span class="op">)</span></span>
+<span><span class="va">treinamento</span> <span class="op">&lt;-</span> <span class="fu">training</span><span class="op">(</span><span class="va">splitted</span><span class="op">)</span></span>
+<span><span class="va">teste</span> <span class="op">&lt;-</span> <span class="fu">testing</span><span class="op">(</span><span class="va">splitted</span><span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div class="cell">
+<details><summary>Code</summary><div class="sourceCode" id="cb8"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">receita</span> <span class="op">&lt;-</span> <span class="fu">recipe</span><span class="op">(</span><span class="va">HeartDisease</span> <span class="op">~</span> <span class="va">.</span>, data <span class="op">=</span> <span class="va">treinamento</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">recipes</span><span class="fu">::</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/step_dummy.html">step_dummy</a></span><span class="op">(</span><span class="fu">all_nominal</span><span class="op">(</span><span class="op">)</span>, <span class="op">-</span><span class="fu">all_outcomes</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> </span>
+<span>  <span class="fu">recipes</span><span class="fu">::</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/step_zv.html">step_zv</a></span><span class="op">(</span><span class="fu">all_numeric</span><span class="op">(</span><span class="op">)</span>, <span class="op">-</span><span class="fu">all_outcomes</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> </span>
+<span>  <span class="fu">recipes</span><span class="fu">::</span><span class="fu"><a href="https://recipes.tidymodels.org/reference/step_corr.html">step_corr</a></span><span class="op">(</span><span class="fu">all_predictors</span><span class="op">(</span><span class="op">)</span>, threshold <span class="op">=</span> <span class="fl">0.7</span>, method <span class="op">=</span> <span class="st">&quot;spearman&quot;</span><span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section><section id="treinando" class="level2"><h2 class="anchored" data-anchor-id="treinando">Treinando</h2>
+<div class="cell">
+<details><summary>Code</summary><div class="sourceCode" id="cb9"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">log_reg</span> <span class="op">&lt;-</span></span>
+<span>  <span class="fu">logistic_reg</span><span class="op">(</span>penalty <span class="op">=</span> <span class="fu">tune</span><span class="op">(</span><span class="op">)</span>, mixture <span class="op">=</span> <span class="fu">tune</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> <span class="co"># logistic regression</span></span>
+<span>  <span class="fu">set_engine</span><span class="op">(</span>engine <span class="op">=</span> <span class="st">&quot;glmnet&quot;</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">set_mode</span><span class="op">(</span><span class="st">&quot;classification&quot;</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">wf</span> <span class="op">&lt;-</span> <span class="fu">workflow_set</span><span class="op">(</span></span>
+<span>  preproc <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">receita</span><span class="op">)</span>,</span>
+<span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>modelo_log <span class="op">=</span> <span class="va">log_reg</span><span class="op">)</span></span>
+<span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">mutate</span><span class="op">(</span>wflow_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html">gsub</a></span><span class="op">(</span><span class="st">&quot;(recipe_)&quot;</span>, <span class="st">&quot;&quot;</span>, <span class="va">wflow_id</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html">set.seed</a></span><span class="op">(</span><span class="fl">2023</span><span class="op">)</span></span>
+<span><span class="va">vfold</span> <span class="op">&lt;-</span> <span class="fu">vfold_cv</span><span class="op">(</span><span class="va">treinamento</span>,</span>
+<span>                     v <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>                     strata <span class="op">=</span> <span class="va">HeartDisease</span><span class="op">)</span> </span>
+<span></span>
+<span><span class="va">grid_control</span> <span class="op">&lt;-</span> <span class="fu">control_grid</span><span class="op">(</span></span>
+<span>  save_pred <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  save_workflow <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  parallel_over <span class="op">=</span> <span class="st">&quot;resamples&quot;</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">metrica</span> <span class="op">&lt;-</span> <span class="fu">metric_set</span><span class="op">(</span><span class="va">accuracy</span>, <span class="va">roc_auc</span><span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div class="cell">
+<details><summary>Code</summary><div class="sourceCode" id="cb10"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">tunagem</span> <span class="op">&lt;-</span> </span>
+<span>  <span class="va">wf</span> <span class="op">%&gt;%</span> </span>
+<span>  <span class="fu">workflow_map</span><span class="op">(</span></span>
+<span>    verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>    seed <span class="op">=</span> <span class="fl">2023</span>,</span>
+<span>    resamples <span class="op">=</span> <span class="va">vfold</span>,</span>
+<span>    control <span class="op">=</span> <span class="va">grid_control</span>,</span>
+<span>    metrics <span class="op">=</span> <span class="va">metrica</span>,</span>
+<span>    grid <span class="op">=</span> <span class="fl">50L</span></span>
+<span>  <span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details><div class="cell-output cell-output-stderr">
+<pre><code>i 1 of 1 tuning:     modelo_log</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package &#39;glmnet&#39; was built under R version 4.2.3</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>✔ 1 of 1 tuning:     modelo_log (19.1s)</code></pre>
+</div>
+</div>
+</section><section id="verificando-os-melhores-hiperparametros" class="level2"><h2 class="anchored" data-anchor-id="verificando-os-melhores-hiperparametros">Verificando os melhores hiperparametros</h2>
+<div class="cell">
+<details><summary>Code</summary><div class="sourceCode" id="cb14"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">best</span> <span class="op">=</span> <span class="va">tunagem</span> <span class="op">%&gt;%</span> </span>
+<span>  <span class="fu">extract_workflow_set_result</span><span class="op">(</span><span class="st">&quot;modelo_log&quot;</span><span class="op">)</span> <span class="op">%&gt;%</span> </span>
+<span>  <span class="fu">select_best</span><span class="op">(</span>metric <span class="op">=</span> <span class="st">&quot;roc_auc&quot;</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">best</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html">kable</a></span><span class="op">(</span><span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details><div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<thead><tr class="header">
+<th style="text-align: right;">penalty</th>
+<th style="text-align: right;">mixture</th>
+<th style="text-align: left;">.config</th>
+</tr></thead>
+<tbody><tr class="odd">
+<td style="text-align: right;">0.0274627</td>
+<td style="text-align: right;">0.3160346</td>
+<td style="text-align: left;">Preprocessor1_Model15</td>
+</tr></tbody>
+</table>
+</div>
+<details><summary>Code</summary><div class="sourceCode" id="cb15"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">test</span> <span class="op">&lt;-</span>  <span class="va">tunagem</span> <span class="op">%&gt;%</span> </span>
+<span>   <span class="fu">extract_workflow</span><span class="op">(</span><span class="st">&quot;modelo_log&quot;</span><span class="op">)</span> <span class="op">%&gt;%</span> </span>
+<span>   <span class="fu">finalize_workflow</span><span class="op">(</span><span class="va">best</span><span class="op">)</span> <span class="op">%&gt;%</span> </span>
+<span>   <span class="fu">last_fit</span><span class="op">(</span>split <span class="op">=</span> <span class="va">splitted</span>,</span>
+<span>            metrics <span class="op">=</span> <span class="fu">metric_set</span><span class="op">(</span><span class="va">accuracy</span>, <span class="va">roc_auc</span><span class="op">)</span><span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section><section id="finalizando-o-modelo-e-testando-em-uma-matriz-de-confusão" class="level2"><h2 class="anchored" data-anchor-id="finalizando-o-modelo-e-testando-em-uma-matriz-de-confusão">Finalizando o modelo e testando em uma matriz de confusão</h2>
+<div class="cell">
+<details><summary>Code</summary><div class="sourceCode" id="cb16"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">predictions</span> <span class="op">&lt;-</span> <span class="va">test</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">collect_predictions</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">matriz_confusão</span> <span class="op">&lt;-</span> <span class="va">predictions</span> <span class="op">%&gt;%</span> </span>
+<span>  <span class="fu">conf_mat</span><span class="op">(</span><span class="va">HeartDisease</span>, <span class="va">.pred_class</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/proportions.html">prop.table</a></span><span class="op">(</span><span class="va">matriz_confusão</span><span class="op">$</span><span class="va">table</span><span class="op">)</span>,<span class="fl">2</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>  <span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html">kable</a></span><span class="op">(</span><span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details><div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<thead><tr class="header">
+<th style="text-align: left;"></th>
+<th style="text-align: right;">Normal</th>
+<th style="text-align: right;">Doença cardiaca</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Normal</td>
+<td style="text-align: right;">0.38</td>
+<td style="text-align: right;">0.03</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Doença cardiaca</td>
+<td style="text-align: right;">0.07</td>
+<td style="text-align: right;">0.53</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section><section id="verificando-a-curva-roc" class="level2"><h2 class="anchored" data-anchor-id="verificando-a-curva-roc">Verificando a curva roc</h2>
+<div class="cell">
+<details><summary>Code</summary><div class="sourceCode" id="cb17"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">curva_roc</span> <span class="op">&lt;-</span> <span class="fu">roc_curve</span><span class="op">(</span><span class="va">predictions</span>, <span class="va">HeartDisease</span>, <span class="va">.pred_Normal</span><span class="op">)</span></span>
+<span><span class="fu">roc_auc</span><span class="op">(</span><span class="va">predictions</span>, <span class="va">HeartDisease</span>, <span class="va">.pred_Normal</span><span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details><div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 3
+  .metric .estimator .estimate
+  &lt;chr&gt;   &lt;chr&gt;          &lt;dbl&gt;
+1 roc_auc binary         0.942</code></pre>
+</div>
+<details><summary>Code</summary><div class="sourceCode" id="cb19"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu">autoplot</span><span class="op">(</span><span class="va">curva_roc</span><span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details><div class="cell-output-display">
+<p><img src="data:image/png;base64,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" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>O modelo em questão tem um desempenho melhor do que um classificador aleatório.</p>
 <!-- -->
 
 </section></section></main><!-- /main column --><script id="quarto-html-after-body" type="application/javascript">
@@ -3701,93 +3744,163 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   }
 });
 </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class>
-<div class="sourceCode" id="cb10" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> &quot;Prova 3 - Machine Learning&quot;</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> &quot;Eraldo Rocha&quot;</span></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> last-modified</span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="an">date-format:</span><span class="co"> &quot;DD MMM, YYYY&quot;</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="an">format:</span><span class="co"> </span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="co">  html:</span></span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="co">    theme: lux</span></span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="co">    code-fold: true</span></span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="co">    code-tools: true</span></span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="co">    code-block-bg: true</span></span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="co">    code-block-border-left: &quot;#9400D3&quot;</span></span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="co">    highlight-style: github</span></span>
-<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="co">    code-link: true</span></span>
-<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="co">    toc: true </span></span>
-<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a><span class="co">    toc-title: Sumário</span></span>
-<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a><span class="co">    toc-location: left</span></span>
-<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="co">    toc-depth: 3</span></span>
-<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a><span class="co">    number-depth: 4</span></span>
-<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a><span class="co">    smooth-scroll: true</span></span>
-<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a><span class="co">    </span></span>
-<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a><span class="an">self-contained:</span><span class="co"> true</span></span>
-<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a><span class="an">page-layout:</span><span class="co"> full</span></span>
-<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a><span class="an">editor:</span><span class="co"> source</span></span>
-<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, warning=FALSE}</span></span>
-<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidymodels)</span>
-<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a><span class="fu">tidymodels_prefer</span>()</span>
-<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a><span class="fu"># Questão 1</span></span>
-<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>São 2 banco de dados que contem informações sociodemográficas e socioeconômicas de clientes de um banco.</span>
-<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a>A ideia é construir um modelo que classifique futuros clientes em &quot;bons&quot; e &quot;ruins&quot; pagadores</span>
-<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a><span class="fu">### </span></span>
-<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(<span class="at">list =</span> <span class="fu">ls</span>())</span>
-<span id="cb10-46"><a href="#cb10-46" aria-hidden="true" tabindex="-1"></a>url <span class="ot">=</span> <span class="st">&#39;https://raw.githubusercontent.com/eraldof/machine_learning/main/Projeto_Terceira%20Prova/application_record.csv&#39;</span></span>
-<span id="cb10-47"><a href="#cb10-47" aria-hidden="true" tabindex="-1"></a>dados1 <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(url)</span>
-<span id="cb10-48"><a href="#cb10-48" aria-hidden="true" tabindex="-1"></a>url <span class="ot">=</span> <span class="st">&#39;https://raw.githubusercontent.com/eraldof/machine_learning/main/Projeto_Terceira%20Prova/credit_record.csv&#39;</span></span>
-<span id="cb10-49"><a href="#cb10-49" aria-hidden="true" tabindex="-1"></a>dados2 <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(url)</span>
-<span id="cb10-50"><a href="#cb10-50" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-51"><a href="#cb10-51" aria-hidden="true" tabindex="-1"></a>dados2 <span class="ot">&lt;-</span> dados2[,<span class="sc">-</span><span class="dv">2</span>]</span>
-<span id="cb10-52"><a href="#cb10-52" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb10-53"><a href="#cb10-53" aria-hidden="true" tabindex="-1"></a>A variável STATUS apresenta-se da seguinte forma:</span>
-<span id="cb10-54"><a href="#cb10-54" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-55"><a href="#cb10-55" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>0: 1 a 29 dias de atraso; </span>
-<span id="cb10-56"><a href="#cb10-56" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>1: 30 a 59 dias de atraso; </span>
-<span id="cb10-57"><a href="#cb10-57" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>2: 60 a 89 dias de atraso;</span>
-<span id="cb10-58"><a href="#cb10-58" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>3: 90 a 119 dias de atraso; </span>
-<span id="cb10-59"><a href="#cb10-59" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>4: 120 a 149 dias de atraso; </span>
-<span id="cb10-60"><a href="#cb10-60" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>5: Dívidas vencidas ou incobráveis, baixas por mais de 150 dias; </span>
-<span id="cb10-61"><a href="#cb10-61" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>C: quitado naquele mês;</span>
-<span id="cb10-62"><a href="#cb10-62" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>X: Nenhum empréstimo no mês.</span>
-<span id="cb10-63"><a href="#cb10-63" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-64"><a href="#cb10-64" aria-hidden="true" tabindex="-1"></a>Serão feitas as seguintes transformações: </span>
-<span id="cb10-65"><a href="#cb10-65" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-66"><a href="#cb10-66" aria-hidden="true" tabindex="-1"></a>Será atribuido 1 para clientes que pagaram suas dívidas com no máximo 30 dias de atraso e clientes que quitaram suas dívidas. Para as demais respostas atribuiremos 0. Além disso, também atribuiremos 0 para clientes que não pediram nenhum emprestimo com a finalidade de diminuir o risco de ceder crédito sem informações prévias.  </span>
-<span id="cb10-67"><a href="#cb10-67" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-68"><a href="#cb10-68" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-69"><a href="#cb10-69" aria-hidden="true" tabindex="-1"></a>A variável <span class="in">`DAYS_BIRTH`</span> foi transformada na variável <span class="in">`AGE`</span>.</span>
-<span id="cb10-70"><a href="#cb10-70" aria-hidden="true" tabindex="-1"></a>A variável <span class="in">`DAYS_EMPLOYED`</span> foi transformada em <span class="in">`MONTH_EMPLOYED`</span>.</span>
-<span id="cb10-71"><a href="#cb10-71" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-72"><a href="#cb10-72" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, warning= F}</span></span>
-<span id="cb10-73"><a href="#cb10-73" aria-hidden="true" tabindex="-1"></a>customers <span class="ot">&lt;-</span> dados1 <span class="sc">%&gt;%</span> <span class="fu">inner_join</span>(dados2)</span>
-<span id="cb10-74"><a href="#cb10-74" aria-hidden="true" tabindex="-1"></a>customers<span class="sc">$</span>STATUS <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(customers<span class="sc">$</span>STATUS <span class="sc">==</span> <span class="st">&#39;0&#39;</span> <span class="sc">|</span> </span>
-<span id="cb10-75"><a href="#cb10-75" aria-hidden="true" tabindex="-1"></a>                           customers<span class="sc">$</span>STATUS <span class="sc">==</span> <span class="st">&#39;C&#39;</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb10-76"><a href="#cb10-76" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-77"><a href="#cb10-77" aria-hidden="true" tabindex="-1"></a>customers<span class="sc">$</span>AGE <span class="ot">&lt;-</span> customers<span class="sc">$</span>DAYS_BIRTH <span class="sc">/</span> <span class="dv">365</span> <span class="sc">*</span> <span class="sc">-</span><span class="dv">1</span></span>
-<span id="cb10-78"><a href="#cb10-78" aria-hidden="true" tabindex="-1"></a>customers<span class="sc">$</span>MONTH_EMPLOYED <span class="ot">&lt;-</span> (customers<span class="sc">$</span>DAYS_EMPLOYED <span class="sc">/</span> <span class="dv">30</span>) <span class="sc">*</span> <span class="sc">-</span><span class="dv">1</span></span>
-<span id="cb10-79"><a href="#cb10-79" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-80"><a href="#cb10-80" aria-hidden="true" tabindex="-1"></a>customers <span class="ot">&lt;-</span> customers <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(<span class="st">&#39;ID&#39;</span>, <span class="st">&#39;DAYS_BIRTH&#39;</span>, <span class="st">&#39;DAYS_EMPLOYED&#39;</span>))</span>
-<span id="cb10-81"><a href="#cb10-81" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-82"><a href="#cb10-82" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(customers)){</span>
-<span id="cb10-83"><a href="#cb10-83" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="fu">is.character</span>(customers[,i]) <span class="sc">==</span> T){</span>
-<span id="cb10-84"><a href="#cb10-84" aria-hidden="true" tabindex="-1"></a>    customers[,i] <span class="ot">&lt;-</span> <span class="fu">factor</span>(customers[,i])</span>
-<span id="cb10-85"><a href="#cb10-85" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb10-86"><a href="#cb10-86" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb10-87"><a href="#cb10-87" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-88"><a href="#cb10-88" aria-hidden="true" tabindex="-1"></a>skimr<span class="sc">::</span><span class="fu">skim</span>(customers)</span>
-<span id="cb10-89"><a href="#cb10-89" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<div class="sourceCode" id="cb20" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> &quot;Prova 3 - Machine Learning&quot;</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> &quot;Eraldo Rocha&quot;</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> last-modified</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="an">date-format:</span><span class="co"> &quot;DD MMM, YYYY&quot;</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="an">format:</span><span class="co"> </span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="co">  html:</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a><span class="co">    theme: lux</span></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="co">    code-fold: true</span></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a><span class="co">    code-tools: true</span></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a><span class="co">    code-block-bg: true</span></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a><span class="co">    code-block-border-left: &quot;#9400D3&quot;</span></span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a><span class="co">    highlight-style: github</span></span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a><span class="co">    code-link: true</span></span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a><span class="co">    toc: true </span></span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a><span class="co">    toc-title: Sumário</span></span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a><span class="co">    toc-location: left</span></span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a><span class="co">    toc-depth: 3</span></span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a><span class="co">    number-depth: 4</span></span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a><span class="co">    smooth-scroll: true</span></span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a><span class="co">    </span></span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a><span class="an">self-contained:</span><span class="co"> true</span></span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a><span class="an">page-layout:</span><span class="co"> full</span></span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a><span class="an">editor:</span><span class="co"> source</span></span>
+<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-28"><a href="#cb20-28" aria-hidden="true" tabindex="-1"></a><span class="in">```{r, warning=FALSE}</span></span>
+<span id="cb20-29"><a href="#cb20-29" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(<span class="at">list =</span> <span class="fu">ls</span>())</span>
+<span id="cb20-30"><a href="#cb20-30" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidymodels)</span>
+<span id="cb20-31"><a href="#cb20-31" aria-hidden="true" tabindex="-1"></a><span class="fu">tidymodels_prefer</span>()</span>
+<span id="cb20-32"><a href="#cb20-32" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-33"><a href="#cb20-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-34"><a href="#cb20-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-35"><a href="#cb20-35" aria-hidden="true" tabindex="-1"></a><span class="fu"># Questão 1</span></span>
+<span id="cb20-36"><a href="#cb20-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-37"><a href="#cb20-37" aria-hidden="true" tabindex="-1"></a>Abaixo podemos visualizar um resumo das informações presente em nosso banco de dados, que consiste em 12 caracteristicas clínicas de 918 indivíduos diferentes. Das 12 características clínicas, 7 são variáveis categóricas e 5 variáveis numéricas. Além disso, na coluna n_missing, constata-se a completude do nosso banco de dados.</span>
+<span id="cb20-38"><a href="#cb20-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-41"><a href="#cb20-41" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-42"><a href="#cb20-42" aria-hidden="true" tabindex="-1"></a>url <span class="ot">=</span> <span class="st">&#39;https://raw.githubusercontent.com/eraldof/machine_learning/main/Projeto_Terceira%20Prova/heart.csv&#39;</span></span>
+<span id="cb20-43"><a href="#cb20-43" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(url)</span>
+<span id="cb20-44"><a href="#cb20-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-45"><a href="#cb20-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-46"><a href="#cb20-46" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>Sex <span class="ot">&lt;-</span> <span class="fu">factor</span>(data<span class="sc">$</span>Sex, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">&quot;M&quot;</span>,<span class="st">&quot;F&quot;</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Masculino&quot;</span>, <span class="st">&quot;Feminino&quot;</span>))</span>
+<span id="cb20-47"><a href="#cb20-47" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>ChestPainType <span class="ot">&lt;-</span> <span class="fu">factor</span>(data<span class="sc">$</span>ChestPainType, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">&quot;TA&quot;</span>, <span class="st">&quot;ATA&quot;</span>, <span class="st">&quot;NAP&quot;</span>, <span class="st">&quot;ASY&quot;</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Angina Típica&quot;</span>, <span class="st">&quot;Angina Atípica&quot;</span>, <span class="st">&quot;Dor Não Anginosa&quot;</span>, <span class="st">&quot;Assintomática&quot;</span>))</span>
+<span id="cb20-48"><a href="#cb20-48" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>FastingBS <span class="ot">&lt;-</span> <span class="fu">factor</span>(data<span class="sc">$</span>FastingBS, <span class="at">levels =</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">1</span>),<span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;C.C&quot;</span>, <span class="st">&quot;JejumBS &gt; 120 mg/dl&quot;</span>))</span>
+<span id="cb20-49"><a href="#cb20-49" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>RestingECG <span class="ot">&lt;-</span> <span class="fu">factor</span>(data<span class="sc">$</span>RestingECG, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">&quot;Normal&quot;</span>, <span class="st">&quot;ST&quot;</span>, <span class="st">&quot;LVH&quot;</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Normal&quot;</span>, <span class="st">&quot;anormalidade da onda&quot;</span>, <span class="st">&quot;hipertrofia ventricular&quot;</span>))</span>
+<span id="cb20-50"><a href="#cb20-50" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>ExerciseAngina <span class="ot">&lt;-</span> <span class="fu">factor</span>(data<span class="sc">$</span>ExerciseAngina, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">&quot;N&quot;</span>, <span class="st">&quot;Y&quot;</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Não&quot;</span>, <span class="st">&quot;Sim&quot;</span>))</span>
+<span id="cb20-51"><a href="#cb20-51" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>ST_Slope <span class="ot">&lt;-</span> <span class="fu">factor</span>(data<span class="sc">$</span>ST_Slope, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">&quot;Up&quot;</span>, <span class="st">&quot;Flat&quot;</span>, <span class="st">&quot;Down&quot;</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Ascendente&quot;</span>, <span class="st">&quot;Plano&quot;</span>, <span class="st">&quot;Descendente&quot;</span>))</span>
+<span id="cb20-52"><a href="#cb20-52" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>HeartDisease <span class="ot">&lt;-</span> <span class="fu">factor</span>(data<span class="sc">$</span>HeartDisease, <span class="at">levels =</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">1</span>),<span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;Normal&quot;</span>, <span class="st">&quot;Doença cardiaca&quot;</span>))</span>
+<span id="cb20-53"><a href="#cb20-53" aria-hidden="true" tabindex="-1"></a>data<span class="sc">$</span>Oldpeak <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(data<span class="sc">$</span>Oldpeak)</span>
+<span id="cb20-54"><a href="#cb20-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-55"><a href="#cb20-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-56"><a href="#cb20-56" aria-hidden="true" tabindex="-1"></a>skimr<span class="sc">::</span><span class="fu">skim</span>(data)</span>
+<span id="cb20-57"><a href="#cb20-57" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-58"><a href="#cb20-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-59"><a href="#cb20-59" aria-hidden="true" tabindex="-1"></a><span class="fu">## Repartindo o banco de dados e criando a receita</span></span>
+<span id="cb20-62"><a href="#cb20-62" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-63"><a href="#cb20-63" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">2023</span>)</span>
+<span id="cb20-64"><a href="#cb20-64" aria-hidden="true" tabindex="-1"></a>splitted <span class="ot">&lt;-</span> <span class="fu">initial_split</span>(data, <span class="at">prop =</span> <span class="fl">0.80</span>, <span class="at">strata =</span> <span class="st">`</span><span class="at">HeartDisease</span><span class="st">`</span>)</span>
+<span id="cb20-65"><a href="#cb20-65" aria-hidden="true" tabindex="-1"></a>treinamento <span class="ot">&lt;-</span> <span class="fu">training</span>(splitted)</span>
+<span id="cb20-66"><a href="#cb20-66" aria-hidden="true" tabindex="-1"></a>teste <span class="ot">&lt;-</span> <span class="fu">testing</span>(splitted)</span>
+<span id="cb20-67"><a href="#cb20-67" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-68"><a href="#cb20-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-69"><a href="#cb20-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-72"><a href="#cb20-72" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-73"><a href="#cb20-73" aria-hidden="true" tabindex="-1"></a>receita <span class="ot">&lt;-</span> <span class="fu">recipe</span>(HeartDisease <span class="sc">~</span> ., <span class="at">data =</span> treinamento) <span class="sc">%&gt;%</span></span>
+<span id="cb20-74"><a href="#cb20-74" aria-hidden="true" tabindex="-1"></a>  recipes<span class="sc">::</span><span class="fu">step_dummy</span>(<span class="fu">all_nominal</span>(), <span class="sc">-</span><span class="fu">all_outcomes</span>()) <span class="sc">%&gt;%</span> </span>
+<span id="cb20-75"><a href="#cb20-75" aria-hidden="true" tabindex="-1"></a>  recipes<span class="sc">::</span><span class="fu">step_zv</span>(<span class="fu">all_numeric</span>(), <span class="sc">-</span><span class="fu">all_outcomes</span>()) <span class="sc">%&gt;%</span> </span>
+<span id="cb20-76"><a href="#cb20-76" aria-hidden="true" tabindex="-1"></a>  recipes<span class="sc">::</span><span class="fu">step_corr</span>(<span class="fu">all_predictors</span>(), <span class="at">threshold =</span> <span class="fl">0.7</span>, <span class="at">method =</span> <span class="st">&quot;spearman&quot;</span>)</span>
+<span id="cb20-77"><a href="#cb20-77" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-78"><a href="#cb20-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-79"><a href="#cb20-79" aria-hidden="true" tabindex="-1"></a><span class="fu">## Treinando</span></span>
+<span id="cb20-80"><a href="#cb20-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-83"><a href="#cb20-83" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-84"><a href="#cb20-84" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-85"><a href="#cb20-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-88"><a href="#cb20-88" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-89"><a href="#cb20-89" aria-hidden="true" tabindex="-1"></a>log_reg <span class="ot">&lt;-</span></span>
+<span id="cb20-90"><a href="#cb20-90" aria-hidden="true" tabindex="-1"></a>  <span class="fu">logistic_reg</span>(<span class="at">penalty =</span> <span class="fu">tune</span>(), <span class="at">mixture =</span> <span class="fu">tune</span>()) <span class="sc">%&gt;%</span> <span class="co"># logistic regression</span></span>
+<span id="cb20-91"><a href="#cb20-91" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="at">engine =</span> <span class="st">&quot;glmnet&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb20-92"><a href="#cb20-92" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_mode</span>(<span class="st">&quot;classification&quot;</span>)</span>
+<span id="cb20-93"><a href="#cb20-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-94"><a href="#cb20-94" aria-hidden="true" tabindex="-1"></a>wf <span class="ot">&lt;-</span> <span class="fu">workflow_set</span>(</span>
+<span id="cb20-95"><a href="#cb20-95" aria-hidden="true" tabindex="-1"></a>  <span class="at">preproc =</span> <span class="fu">list</span>(receita),</span>
+<span id="cb20-96"><a href="#cb20-96" aria-hidden="true" tabindex="-1"></a>  <span class="at">models =</span> <span class="fu">list</span>(<span class="at">modelo_log =</span> log_reg)</span>
+<span id="cb20-97"><a href="#cb20-97" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span></span>
+<span id="cb20-98"><a href="#cb20-98" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">wflow_id =</span> <span class="fu">gsub</span>(<span class="st">&quot;(recipe_)&quot;</span>, <span class="st">&quot;&quot;</span>, wflow_id))</span>
+<span id="cb20-99"><a href="#cb20-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-100"><a href="#cb20-100" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">2023</span>)</span>
+<span id="cb20-101"><a href="#cb20-101" aria-hidden="true" tabindex="-1"></a>vfold <span class="ot">&lt;-</span> <span class="fu">vfold_cv</span>(treinamento,</span>
+<span id="cb20-102"><a href="#cb20-102" aria-hidden="true" tabindex="-1"></a>                     <span class="at">v =</span> <span class="dv">5</span>,</span>
+<span id="cb20-103"><a href="#cb20-103" aria-hidden="true" tabindex="-1"></a>                     <span class="at">strata =</span> HeartDisease) </span>
+<span id="cb20-104"><a href="#cb20-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-105"><a href="#cb20-105" aria-hidden="true" tabindex="-1"></a>grid_control <span class="ot">&lt;-</span> <span class="fu">control_grid</span>(</span>
+<span id="cb20-106"><a href="#cb20-106" aria-hidden="true" tabindex="-1"></a>  <span class="at">save_pred =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb20-107"><a href="#cb20-107" aria-hidden="true" tabindex="-1"></a>  <span class="at">save_workflow =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb20-108"><a href="#cb20-108" aria-hidden="true" tabindex="-1"></a>  <span class="at">parallel_over =</span> <span class="st">&quot;resamples&quot;</span></span>
+<span id="cb20-109"><a href="#cb20-109" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-110"><a href="#cb20-110" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-111"><a href="#cb20-111" aria-hidden="true" tabindex="-1"></a>metrica <span class="ot">&lt;-</span> <span class="fu">metric_set</span>(accuracy, roc_auc)</span>
+<span id="cb20-112"><a href="#cb20-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-113"><a href="#cb20-113" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-114"><a href="#cb20-114" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-115"><a href="#cb20-115" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-118"><a href="#cb20-118" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-119"><a href="#cb20-119" aria-hidden="true" tabindex="-1"></a>tunagem <span class="ot">&lt;-</span> </span>
+<span id="cb20-120"><a href="#cb20-120" aria-hidden="true" tabindex="-1"></a>  wf <span class="sc">%&gt;%</span> </span>
+<span id="cb20-121"><a href="#cb20-121" aria-hidden="true" tabindex="-1"></a>  <span class="fu">workflow_map</span>(</span>
+<span id="cb20-122"><a href="#cb20-122" aria-hidden="true" tabindex="-1"></a>    <span class="at">verbose =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb20-123"><a href="#cb20-123" aria-hidden="true" tabindex="-1"></a>    <span class="at">seed =</span> <span class="dv">2023</span>,</span>
+<span id="cb20-124"><a href="#cb20-124" aria-hidden="true" tabindex="-1"></a>    <span class="at">resamples =</span> vfold,</span>
+<span id="cb20-125"><a href="#cb20-125" aria-hidden="true" tabindex="-1"></a>    <span class="at">control =</span> grid_control,</span>
+<span id="cb20-126"><a href="#cb20-126" aria-hidden="true" tabindex="-1"></a>    <span class="at">metrics =</span> metrica,</span>
+<span id="cb20-127"><a href="#cb20-127" aria-hidden="true" tabindex="-1"></a>    <span class="at">grid =</span> 50L</span>
+<span id="cb20-128"><a href="#cb20-128" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb20-129"><a href="#cb20-129" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-130"><a href="#cb20-130" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-131"><a href="#cb20-131" aria-hidden="true" tabindex="-1"></a><span class="fu">## Verificando os melhores hiperparametros</span></span>
+<span id="cb20-134"><a href="#cb20-134" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-135"><a href="#cb20-135" aria-hidden="true" tabindex="-1"></a>best <span class="ot">=</span> tunagem <span class="sc">%&gt;%</span> </span>
+<span id="cb20-136"><a href="#cb20-136" aria-hidden="true" tabindex="-1"></a>  <span class="fu">extract_workflow_set_result</span>(<span class="st">&quot;modelo_log&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb20-137"><a href="#cb20-137" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select_best</span>(<span class="at">metric =</span> <span class="st">&quot;roc_auc&quot;</span>)</span>
+<span id="cb20-138"><a href="#cb20-138" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-139"><a href="#cb20-139" aria-hidden="true" tabindex="-1"></a>best <span class="sc">%&gt;%</span></span>
+<span id="cb20-140"><a href="#cb20-140" aria-hidden="true" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>()</span>
+<span id="cb20-141"><a href="#cb20-141" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-142"><a href="#cb20-142" aria-hidden="true" tabindex="-1"></a>test <span class="ot">&lt;-</span>  tunagem <span class="sc">%&gt;%</span> </span>
+<span id="cb20-143"><a href="#cb20-143" aria-hidden="true" tabindex="-1"></a>   <span class="fu">extract_workflow</span>(<span class="st">&quot;modelo_log&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb20-144"><a href="#cb20-144" aria-hidden="true" tabindex="-1"></a>   <span class="fu">finalize_workflow</span>(best) <span class="sc">%&gt;%</span> </span>
+<span id="cb20-145"><a href="#cb20-145" aria-hidden="true" tabindex="-1"></a>   <span class="fu">last_fit</span>(<span class="at">split =</span> splitted,</span>
+<span id="cb20-146"><a href="#cb20-146" aria-hidden="true" tabindex="-1"></a>            <span class="at">metrics =</span> <span class="fu">metric_set</span>(accuracy, roc_auc))</span>
+<span id="cb20-147"><a href="#cb20-147" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-148"><a href="#cb20-148" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-149"><a href="#cb20-149" aria-hidden="true" tabindex="-1"></a><span class="fu">## Finalizando o modelo e testando em uma matriz de confusão</span></span>
+<span id="cb20-152"><a href="#cb20-152" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-153"><a href="#cb20-153" aria-hidden="true" tabindex="-1"></a>predictions <span class="ot">&lt;-</span> test <span class="sc">%&gt;%</span></span>
+<span id="cb20-154"><a href="#cb20-154" aria-hidden="true" tabindex="-1"></a>  <span class="fu">collect_predictions</span>()</span>
+<span id="cb20-155"><a href="#cb20-155" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-156"><a href="#cb20-156" aria-hidden="true" tabindex="-1"></a>matriz_confusão <span class="ot">&lt;-</span> predictions <span class="sc">%&gt;%</span> </span>
+<span id="cb20-157"><a href="#cb20-157" aria-hidden="true" tabindex="-1"></a>  <span class="fu">conf_mat</span>(HeartDisease, .pred_class)</span>
+<span id="cb20-158"><a href="#cb20-158" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-159"><a href="#cb20-159" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">prop.table</span>(matriz_confusão<span class="sc">$</span>table),<span class="dv">2</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb20-160"><a href="#cb20-160" aria-hidden="true" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>()</span>
+<span id="cb20-161"><a href="#cb20-161" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-162"><a href="#cb20-162" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-163"><a href="#cb20-163" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-164"><a href="#cb20-164" aria-hidden="true" tabindex="-1"></a><span class="fu">## Verificando a curva roc</span></span>
+<span id="cb20-167"><a href="#cb20-167" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb20-168"><a href="#cb20-168" aria-hidden="true" tabindex="-1"></a>curva_roc <span class="ot">&lt;-</span> <span class="fu">roc_curve</span>(predictions, HeartDisease, .pred_Normal)</span>
+<span id="cb20-169"><a href="#cb20-169" aria-hidden="true" tabindex="-1"></a><span class="fu">roc_auc</span>(predictions, HeartDisease, .pred_Normal)</span>
+<span id="cb20-170"><a href="#cb20-170" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(curva_roc)</span>
+<span id="cb20-171"><a href="#cb20-171" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb20-172"><a href="#cb20-172" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-173"><a href="#cb20-173" aria-hidden="true" tabindex="-1"></a>O modelo em questão tem um desempenho melhor do que um classificador aleatório.</span>
+<span id="cb20-174"><a href="#cb20-174" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-175"><a href="#cb20-175" aria-hidden="true" tabindex="-1"></a></span>
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
