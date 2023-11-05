@@ -113,11 +113,11 @@ tunagem <-
     resamples = vfold,
     control = grid_control,
     metrics = metrica,
-    grid = 50L
+    grid = 10L
   )
 ```
 
-## Verificando os melhores hiperparametros
+## Verificando os melhores hiperparametros e finalizando o modelo
 ```{r}
 best = tunagem %>% 
   extract_workflow_set_result("modelo_log") %>% 
@@ -133,7 +133,7 @@ test <-  tunagem %>%
             metrics = metric_set(accuracy, roc_auc))
 ```
 
-## Finalizando o modelo e testando em uma matriz de confusão
+## Testando em uma matriz de confusão
 ```{r}
 predictions <- test %>%
   collect_predictions()
@@ -145,8 +145,7 @@ round(prop.table(matriz_confusão$table),2) %>%
   knitr::kable()
 ```
 
-
-## Verificando a curva roc
+## Observando a curva roc
 ```{r}
 curva_roc <- roc_curve(predictions, HeartDisease, .pred_Normal)
 roc_auc(predictions, HeartDisease, .pred_Normal)
@@ -155,5 +154,179 @@ autoplot(curva_roc)
 
 O modelo em questão tem um desempenho melhor do que um classificador aleatório.
 
+```{r}
+# Salvando o modelo em um arquivo serializado
+#saveRDS(test, file = "modelo_final_questao1.rds")
 
+# Lendo o arquivo serializado com o modelo final
+#load(file = "modelo_final_questao1.rds")
+
+# Fazendo novas previsões
+#head(data1)
+#predict(modelo_final_questao1, new_data = data1)
+```
+
+
+
+
+# Questão 3
+
+Construa um modelo para previsão do valor do imóvel. Considere apenas casas e apartamentos.
+
+```{r}
+rm(list = ls())
+
+url = 'https://raw.githubusercontent.com/eraldof/machine_learning/main/Projeto_Terceira%20Prova/salvador.csv'
+
+dados <- read.csv(url)
+```
+
+## Analise Exploratoria
+
+```{r}
+skimr::skim(dados)
+```
+
+```{r}
+dados <- dados %>% 
+  filter(tipo == "casas" | tipo == "apartamentos") %>% 
+  select(-c(url, bairro, endereco, id, endereco, latitude, longitude, comercio))
+```
+
+É possível verificar que as variáveis `iptu`, `condominio`, `quarto`, `vaga` e `banheiro` possuem informações faltantes. Usaremos KNN para imputar esses valores. Além disso, removeremos a coluna `url`, `id`, `endereco`, `comercio`, `latitude`, `longitude` visto que ja temos informações da latitude e longitude dos imoveis normalizadas. E manteremos apenas os registros das `casas` e `apartamentos`.
+
+
+## Repartindo o banco e Elaborando a receita
+
+```{r}
+set.seed(2023)
+splitted <- initial_split(dados, prop = 0.9, strata = valor)
+treinamento <- training(splitted)
+```
+
+```{r}
+receita <- recipe(formula = `valor` ~ . , dados) %>% 
+  step_impute_knn(all_predictors(),
+                  impute_with = c("valor", "area", "z_lat", "z_lon"),
+                  neighbors = 15L) %>%
+  step_bin2factor(all_logical_predictors()) %>% 
+  step_dummy(all_nominal_predictors()) %>% 
+  step_YeoJohnson(all_numeric_predictors()) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  step_zv(all_numeric_predictors()) %>%
+  step_corr(all_numeric_predictors())
+```
+
+## Configurando os modelos
+
+
+```{r}
+elastic <- 
+  linear_reg(penalty = tune(),
+             mixture = tune()
+  ) %>% 
+  set_mode("regression") %>% 
+  set_engine("glmnet")
+
+knn <-
+  nearest_neighbor(
+    neighbors = tune()
+  ) %>% 
+  set_mode("regression") %>% 
+  set_engine("kknn")
+
+
+r_forest <- 
+  rand_forest(mtry = tune(), min_n = tune(), trees = tune()) %>%
+  set_engine(engine = "ranger", importance = "impurity") %>% 
+  set_mode("regression")
+
+
+xgb <- boost_tree(tree_depth = tune(), learn_rate = tune(),
+                        loss_reduction = tune(), min_n = tune(),
+                        sample_size = tune(), trees = tune()) %>% 
+   set_engine(engine = "xgboost") %>% 
+   set_mode("regression")
+
+```
+
+```{r}
+all_wf <- 
+   workflow_set(
+     preproc = list(receita),
+     models = list(
+       modelo_knn = knn,
+       modelo_elastic = elastic,
+       modelo_forest = r_forest,
+       modelo_xgb = xgb
+     ),
+     cross = TRUE
+   ) %>%
+  mutate(wflow_id = gsub("(recipe_)", "", wflow_id))
+
+grid_control <- control_grid(
+  save_pred = TRUE,
+  save_workflow = TRUE,
+  parallel_over = "resamples"
+)
+
+vfold <- 
+  treinamento %>% 
+  vfold_cv(v = 5L, strata = valor)
+
+metrica <- metric_set(rmse)
+```
+
+```{r}
+tunagem <- 
+  all_wf %>% 
+  workflow_map(
+    verbose = TRUE,
+    seed = 2023,
+    resamples = vfold,
+    control = grid_control,
+    grid = 5L,
+    metrics = metrica
+  )
+```
+
+## Apresentando os melhores resultados
+
+```{r}
+autoplot(
+  tunagem,
+  rank_metric = "rmse",
+  metric = "rmse",
+  select_best = TRUE
+) + 
+  labs(title = "Melhor resultado dos modelos")+ ylab("rmse")+ xlab("Ranking")
+```
+
+## Hiperparametros do melhor modelo random forest
+```{r}
+best = tunagem %>%
+  extract_workflow_set_result("modelo_forest") %>%
+  select_best(metric = "rmse")
+
+best %>%
+  knitr::kable(caption = "Hiperparametros")
+```
+
+
+## Ajuste final e observando o rmse do modelo
+```{r}
+ wf_final <- 
+   tunagem %>% extract_workflow("modelo_forest") %>% 
+   finalize_workflow(best)
+ 
+ teste <- 
+   wf_final %>%  
+   last_fit(split = splitted)
+ 
+ knitr::kable(teste$.metrics, caption = "Resultados")
+ 
+ modelo_final <- 
+   wf_final %>% 
+   fit(dados)
+```
 
